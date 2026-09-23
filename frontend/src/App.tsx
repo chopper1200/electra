@@ -9,6 +9,7 @@ import Preventivi from "@/pages/Preventivi";
 import PreventivoEditor from "@/pages/PreventivoEditor";
 import PreventivoDetail from "@/pages/PreventivoDetail";
 import Clienti from "@/pages/Clienti";
+import Spesa from "@/pages/Spesa";
 
 // One <Route> per page in src/pages; BrowserRouter already wraps this in main.tsx.
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/lavori" element={<Lavori />} />
           <Route path="/materiali" element={<Materiali />} />
+          <Route path="/spesa" element={<Spesa />} />
           <Route path="/preventivi" element={<Preventivi />} />
           <Route path="/preventivi/nuovo" element={<PreventivoEditor />} />
           <Route path="/preventivi/:id" element={<PreventivoDetail />} />

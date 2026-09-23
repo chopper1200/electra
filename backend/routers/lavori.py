@@ -48,6 +48,7 @@ class ListaItem(BaseModel):
     unita: str = "pz"
     prezzo_stimato: float = 0.0
     comprato: bool = False
+    caricato: bool = False  # true se la spunta "comprato" ha già caricato la giacenza
     note: str = ""
 
 
@@ -117,6 +118,94 @@ async def crea_lavoro(input: LavoroIn):
         indirizzo=input.cliente_indirizzo,
     )
     return lavoro
+
+
+class CantiereSpesa(BaseModel):
+    lavoro_id: str
+    titolo: str
+    cliente_nome: str
+    quantita: float
+
+
+class RigaSpesa(BaseModel):
+    """Riga della lista della spesa unica, aggregata su tutti i cantieri aperti."""
+
+    chiave: str
+    materiale_id: str = ""
+    nome: str
+    unita: str = "pz"
+    quantita_richiesta: float
+    giacenza: float | None = None
+    mancante: float
+    prezzo_stimato: float = 0.0
+    costo_stimato: float
+    cantieri: list[CantiereSpesa] = Field(default_factory=list)
+
+
+class ListaSpesaUnica(BaseModel):
+    righe: list[RigaSpesa]
+    cantieri_aperti: int
+    totale_stimato: float
+
+
+@router.get("/lista-spesa/unica", response_model=ListaSpesaUnica)
+async def lista_spesa_unica():
+    """Unisce le voci non ancora comprate dei cantieri non completati."""
+    lavori = await db.lavori.find({"stato": {"$ne": "completato"}}).to_list(1000)
+    materiali = {m["id"]: m for m in await db.materiali.find({}).to_list(5000)}
+
+    righe: dict[str, RigaSpesa] = {}
+    cantieri_con_lista = set()
+    for lavoro in lavori:
+        for item in lavoro.get("lista_spesa", []):
+            if item.get("comprato"):
+                continue
+            quantita = float(item.get("quantita", 0) or 0)
+            if quantita <= 0:
+                continue
+            cantieri_con_lista.add(lavoro["id"])
+            materiale_id = item.get("materiale_id", "")
+            chiave = materiale_id or f"libero:{item['nome'].strip().lower()}"
+            riga = righe.get(chiave)
+            if riga is None:
+                materiale = materiali.get(materiale_id)
+                riga = RigaSpesa(
+                    chiave=chiave,
+                    materiale_id=materiale_id,
+                    nome=materiale["nome"] if materiale else item["nome"],
+                    unita=item.get("unita", "pz"),
+                    quantita_richiesta=0.0,
+                    giacenza=(
+                        float(materiale.get("quantita_disponibile", 0)) if materiale else None
+                    ),
+                    mancante=0.0,
+                    prezzo_stimato=float(item.get("prezzo_stimato", 0) or 0),
+                    costo_stimato=0.0,
+                )
+                righe[chiave] = riga
+            riga.quantita_richiesta = round(riga.quantita_richiesta + quantita, 2)
+            if not riga.prezzo_stimato:
+                riga.prezzo_stimato = float(item.get("prezzo_stimato", 0) or 0)
+            riga.cantieri.append(
+                CantiereSpesa(
+                    lavoro_id=lavoro["id"],
+                    titolo=lavoro.get("titolo", ""),
+                    cliente_nome=lavoro.get("cliente_nome", ""),
+                    quantita=quantita,
+                )
+            )
+
+    for riga in righe.values():
+        disponibile = riga.giacenza if riga.giacenza is not None else 0.0
+        riga.mancante = round(max(0.0, riga.quantita_richiesta - disponibile), 2)
+        riga.costo_stimato = round(riga.mancante * riga.prezzo_stimato, 2)
+
+    ordinate = sorted(righe.values(), key=lambda r: (-r.mancante, r.nome.lower()))
+    return ListaSpesaUnica(
+        righe=ordinate,
+        cantieri_aperti=len(cantieri_con_lista),
+        totale_stimato=round(sum(r.costo_stimato for r in ordinate), 2),
+    )
 
 
 @router.get("/{lavoro_id}", response_model=Lavoro)
@@ -302,6 +391,31 @@ async def modifica_voce_lista(lavoro_id: str, item_id: str, input: ListaItemPatc
             raise HTTPException(status_code=422, detail="La quantità deve essere maggiore di zero")
     if "nome" in patch and not patch["nome"].strip():
         raise HTTPException(status_code=422, detail="La descrizione non può essere vuota")
+
+    # Carico da lista: spuntare "comprato" carica la giacenza, togliere la spunta la scarica.
+    materiale_id = item.get("materiale_id", "")
+    if "comprato" in patch and materiale_id:
+        gia_caricato = bool(item.get("caricato"))
+        quantita = float(patch.get("quantita", item.get("quantita", 0)) or 0)
+        if patch["comprato"] and not gia_caricato:
+            res = await db.materiali.update_one(
+                {"id": materiale_id}, {"$inc": {"quantita_disponibile": quantita}}
+            )
+            patch["caricato"] = res.matched_count > 0
+        elif not patch["comprato"] and gia_caricato:
+            await db.materiali.update_one(
+                {"id": materiale_id},
+                {"$inc": {"quantita_disponibile": -float(item.get("quantita", 0) or 0)}},
+            )
+            patch["caricato"] = False
+    elif "quantita" in patch and materiale_id and item.get("caricato"):
+        # Voce già caricata in magazzino: allinea la giacenza alla nuova quantità.
+        delta = patch["quantita"] - float(item.get("quantita", 0) or 0)
+        if delta:
+            await db.materiali.update_one(
+                {"id": materiale_id}, {"$inc": {"quantita_disponibile": delta}}
+            )
+
     updated = await db.lavori.find_one_and_update(
         {"id": lavoro_id, "lista_spesa.id": item_id},
         {"$set": {f"lista_spesa.$.{k}": v for k, v in patch.items()}},

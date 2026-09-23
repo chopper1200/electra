@@ -50,7 +50,34 @@ export interface ListaItem {
   unita: string;
   prezzo_stimato: number;
   comprato: boolean;
+  caricato: boolean;
   note: string;
+}
+
+export interface CantiereSpesa {
+  lavoro_id: string;
+  titolo: string;
+  cliente_nome: string;
+  quantita: number;
+}
+
+export interface RigaSpesa {
+  chiave: string;
+  materiale_id: string;
+  nome: string;
+  unita: string;
+  quantita_richiesta: number;
+  giacenza: number | null;
+  mancante: number;
+  prezzo_stimato: number;
+  costo_stimato: number;
+  cantieri: CantiereSpesa[];
+}
+
+export interface ListaSpesaUnica {
+  righe: RigaSpesa[];
+  cantieri_aperti: number;
+  totale_stimato: number;
 }
 
 export interface ListaItemInput {

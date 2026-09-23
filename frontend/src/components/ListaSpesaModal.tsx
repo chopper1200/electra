@@ -62,7 +62,13 @@ export default function ListaSpesaModal({ open, onOpenChange, lavoro }: ListaSpe
     setPrezzo("");
   }, [open, lavoro]);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["lavori"] });
+  const invalidate = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["lavori"] }),
+      qc.invalidateQueries({ queryKey: ["materiali"] }),
+      qc.invalidateQueries({ queryKey: ["lista-spesa-unica"] }),
+      qc.invalidateQueries({ queryKey: ["dashboard"] }),
+    ]);
 
   const add = useMutation({
     mutationFn: (payload: ListaItemInput) =>
@@ -81,7 +87,11 @@ export default function ListaSpesaModal({ open, onOpenChange, lavoro }: ListaSpe
   const patch = useMutation({
     mutationFn: ({ itemId, body }: { itemId: string; body: ListaItemPatch }) =>
       apiPatch<Lavoro>(`/lavori/${lavoro!.id}/lista/${itemId}`, body),
-    onSuccess: invalidate,
+    onSuccess: async (_res, vars) => {
+      await invalidate();
+      if (vars.body.comprato === true) toast.success("Comprato: giacenza di magazzino caricata");
+      else if (vars.body.comprato === false) toast.info("Torna da comprare: giacenza scaricata");
+    },
     onError: () => toast.error("Errore durante la modifica della voce"),
   });
 
@@ -144,7 +154,8 @@ export default function ListaSpesaModal({ open, onOpenChange, lavoro }: ListaSpe
           </DialogTitle>
           <DialogDescription className="text-slate-400">
             Quello che serve in cantiere: confronta con la giacenza, segna cosa hai comprato e
-            importa la lista nel preventivo.
+            importa la lista nel preventivo. Spuntare «comprato» carica da sé la giacenza in
+            magazzino.
           </DialogDescription>
         </DialogHeader>
 

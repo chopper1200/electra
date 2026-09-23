@@ -3,6 +3,7 @@ import {
   FileSpreadsheet,
   LayoutDashboard,
   Package,
+  ShoppingCart,
   UserRound,
   Wrench,
   Zap,
@@ -12,6 +13,7 @@ const LINKS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard-link", end: true },
   { to: "/lavori", label: "Lavori", icon: Wrench, testId: "nav-lavori-link", end: false },
   { to: "/materiali", label: "Materiali", icon: Package, testId: "nav-materiali-link", end: false },
+  { to: "/spesa", label: "Spesa", icon: ShoppingCart, testId: "nav-spesa-link", end: false },
   {
     to: "/preventivi",
     label: "Preventivi",
