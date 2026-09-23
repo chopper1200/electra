@@ -42,6 +42,35 @@ export interface OraLavorata {
   preventivo_id: string;
 }
 
+export interface ListaItem {
+  id: string;
+  materiale_id: string;
+  nome: string;
+  quantita: number;
+  unita: string;
+  prezzo_stimato: number;
+  comprato: boolean;
+  note: string;
+}
+
+export interface ListaItemInput {
+  materiale_id: string;
+  nome: string;
+  quantita: number;
+  unita: string;
+  prezzo_stimato: number;
+  note: string;
+}
+
+export interface ListaItemPatch {
+  nome?: string;
+  quantita?: number;
+  unita?: string;
+  prezzo_stimato?: number;
+  comprato?: boolean;
+  note?: string;
+}
+
 export interface Lavoro {
   id: string;
   titolo: string;
@@ -57,6 +86,7 @@ export interface Lavoro {
   note: string;
   materiali_usati: MaterialUsage[];
   ore_lavorate: OraLavorata[];
+  lista_spesa: ListaItem[];
   created_at: string;
 }
 

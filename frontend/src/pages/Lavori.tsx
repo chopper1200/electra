@@ -9,6 +9,7 @@ import {
   Pencil,
   Phone,
   Plus,
+  ShoppingCart,
   Trash2,
   Wrench,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { apiDelete, apiGet, apiPatch } from "@/lib/api";
 import type { Lavoro, StatoLavoro } from "@/lib/types";
 import { fmtDate, fmtEuro, STATO_LAVORO_LABELS, waLink } from "@/lib/format";
 import JobModal from "@/components/JobModal";
+import ListaSpesaModal from "@/components/ListaSpesaModal";
 import OreModal from "@/components/OreModal";
 import RecordMaterialUsageModal from "@/components/RecordMaterialUsageModal";
 import StatusBadge from "@/components/StatusBadge";
@@ -52,6 +54,7 @@ export default function Lavori() {
   const [editTarget, setEditTarget] = useState<Lavoro | null>(null);
   const [usageTarget, setUsageTarget] = useState<Lavoro | null>(null);
   const [oreTarget, setOreTarget] = useState<Lavoro | null>(null);
+  const [listaTarget, setListaTarget] = useState<Lavoro | null>(null);
 
   const { data: lavori, isLoading, isError } = useQuery({
     queryKey: ["lavori"],
@@ -125,6 +128,12 @@ export default function Lavori() {
           onClick={() => setUsageTarget(l)}
         >
           <ClipboardList size={15} /> Registra materiali
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          data-testid={`job-lista-${l.id}`}
+          onClick={() => setListaTarget(l)}
+        >
+          <ShoppingCart size={15} /> Lista da comprare
         </DropdownMenuItem>
         <DropdownMenuItem
           data-testid={`job-ore-${l.id}`}
@@ -236,6 +245,7 @@ export default function Lavori() {
                 <TableHead className="text-slate-400">Inizio</TableHead>
                 <TableHead className="text-right text-slate-400">Prezzo</TableHead>
                 <TableHead className="text-slate-400">Materiali</TableHead>
+                <TableHead className="text-slate-400">Da comprare</TableHead>
                 <TableHead className="text-right text-slate-400">Azioni</TableHead>
               </TableRow>
             </TableHeader>
@@ -264,6 +274,16 @@ export default function Lavori() {
                     >
                       {l.materiali_usati.length} voci
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      data-testid={`job-lista-badge-${l.id}`}
+                      onClick={() => setListaTarget(l)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#27364F] bg-[#162032] px-2.5 py-1 text-xs text-slate-300 transition-colors hover:border-amber-500/60 hover:text-amber-400"
+                    >
+                      <ShoppingCart size={13} />
+                      {(l.lista_spesa ?? []).filter((i) => !i.comprato).length} da comprare
+                    </button>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
@@ -306,9 +326,18 @@ export default function Lavori() {
                   <Button
                     variant="outline"
                     size="sm"
+                    data-testid={`job-lista-mobile-${l.id}`}
+                    onClick={() => setListaTarget(l)}
+                    className="ml-auto"
+                  >
+                    <ShoppingCart size={15} />{" "}
+                    {(l.lista_spesa ?? []).filter((i) => !i.comprato).length}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     data-testid={`job-usage-mobile-${l.id}`}
                     onClick={() => setUsageTarget(l)}
-                    className="ml-auto"
                   >
                     <ClipboardList size={15} /> Materiali
                   </Button>
@@ -346,6 +375,13 @@ export default function Lavori() {
           if (!o) setOreTarget(null);
         }}
         lavoro={oreTarget}
+      />
+      <ListaSpesaModal
+        open={listaTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setListaTarget(null);
+        }}
+        lavoro={listaTarget}
       />
     </div>
   );

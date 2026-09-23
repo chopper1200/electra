@@ -15,6 +15,12 @@ App in italiano per la gestione del lavoro di un elettricista: **Lavori, Materia
 - `GET/POST /api/lavori`, `GET/PUT/DELETE /api/lavori/{id}`, `PATCH /api/lavori/{id}/stato`
 - `POST /api/lavori/{id}/materiali` {materiale_id, quantita} — aggiunge voce + **decrementa la giacenza**
 - `DELETE /api/lavori/{id}/materiali/{usage_id}` — rimuove voce e **ripristina la giacenza**
+- **Lista materiali da comprare (per lavoro)** — campo `lista_spesa` sul Lavoro:
+  - `POST /api/lavori/{id}/lista` {materiale_id? | nome?, quantita, unita, prezzo_stimato, note} — voce dal listino (nome/unità/prezzo costo ereditati) oppure voce libera. 422 quantità ≤ 0 o nome mancante, 404 materiale/lavoro inesistente
+  - `PATCH /api/lavori/{id}/lista/{item_id}` — modifica nome/quantita/unita/prezzo_stimato/comprato/note (404 voce inesistente)
+  - `DELETE /api/lavori/{id}/lista/{item_id}` — rimuove la voce (non toccà mai le giacenze: la lista è solo "cosa comprare")
+  - UI: `ListaSpesaModal.tsx` aperto da /lavori (menu «Lista da comprare», badge in tabella, pulsante mobile): spunta comprato/da comprare, quantità e prezzo modificabili inline (onBlur), confronto con la giacenza (`mancano X`/`già in magazzino`), spesa stimata totale delle voci non comprate.
+  - Nel builder preventivo: «Importa lista materiali da cantiere» (`btn-import-lista`) porta le voci come righe materiale; le voci libere (senza materiale_id) restano righe con nome testuale editabile e vengono salvate (il filtro accetta `materiale_id || nome`).
 - `POST /api/lavori/{id}/ore` {data, ore, tariffa_oraria, descrizione} — registra ore lavorate
 - `DELETE /api/lavori/{id}/ore/{entry_id}` — rimuove la voce ore (bloccata con 400 se già inclusa in un preventivo)
 - `GET/POST /api/materiali`, `PUT/DELETE /api/materiali/{id}`, `PATCH /api/materiali/{id}/stock` {delta: ±}
@@ -36,7 +42,7 @@ App in italiano per la gestione del lavoro di un elettricista: **Lavori, Materia
 - Riepilogo ore: la dashboard somma le `ore_lavorate` con `data` nel mese corrente (`current_month_iso()`), esponendo `ore_mese`, `valore_ore_mese`, `tariffa_media_mese` e `ore_mese_per_lavoro`.
 
 ## Modelli (Pydantic ↔ TS mirror manuale in frontend/src/lib/types.ts)
-- **Lavoro**: titolo, cliente_nome, cliente_telefono, cliente_indirizzo, descrizione, stato(da_iniziare|in_corso|completato), data_inizio, data_fine_prevista, prezzo_pattuito, ore_manodopera, note, materiali_usati[{materiale_id, nome, quantita, unita, prezzo_unitario}], ore_lavorate[{data, ore, tariffa_oraria, descrizione, preventivo_id}]
+- **Lavoro**: titolo, cliente_nome, cliente_telefono, cliente_indirizzo, descrizione, stato(da_iniziare|in_corso|completato), data_inizio, data_fine_prevista, prezzo_pattuito, ore_manodopera, note, materiali_usati[{materiale_id, nome, quantita, unita, prezzo_unitario}], ore_lavorate[{data, ore, tariffa_oraria, descrizione, preventivo_id}], lista_spesa[{materiale_id, nome, quantita, unita, prezzo_stimato, comprato, note}]
 - **Materiale**: codice_art, nome, categoria(6 categorie italiane), unita_misura(pz|m|conf|rotolo), prezzo_unitario, prezzo_costo, quantita_disponibile, scorta_minima, fornitore
 - **Preventivo**: numero progressivo server-side "P-<anno>-NNNN", data_emissione, validita_giorni, dati cliente, titolo_intervento, voci_materiali, voci_manodopera{descrizione,ore,tariffa_oraria,lavoro_id?,ore_entry_id? — righe importabili dal registro ore di un cantiere}, sconto_percentuale, aliquota_iva(22|10), totale_imponibile/totale_iva/totale_preventivo **calcolati server-side**, stato(bozza|inviato|accettato|rifiutato), note_condizioni, lavoro_id
 

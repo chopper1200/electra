@@ -38,6 +38,19 @@ class OraLavorata(BaseModel):
     preventivo_id: str = ""
 
 
+class ListaItem(BaseModel):
+    """Voce della lista materiali da comprare per un lavoro."""
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    materiale_id: str = ""
+    nome: str
+    quantita: float = 1.0
+    unita: str = "pz"
+    prezzo_stimato: float = 0.0
+    comprato: bool = False
+    note: str = ""
+
+
 class Lavoro(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     titolo: str
@@ -53,6 +66,7 @@ class Lavoro(BaseModel):
     note: str = ""
     materiali_usati: list[MaterialUsage] = Field(default_factory=list)
     ore_lavorate: list[OraLavorata] = Field(default_factory=list)
+    lista_spesa: list[ListaItem] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -216,6 +230,93 @@ async def elimina_ore(lavoro_id: str, entry_id: str):
         )
     updated = await db.lavori.find_one_and_update(
         {"id": lavoro_id}, {"$pull": {"ore_lavorate": {"id": entry_id}}}, return_document=True
+    )
+    return Lavoro(**updated)
+
+
+class ListaItemIn(BaseModel):
+    """Voce in ingresso: da catalogo (materiale_id) oppure voce libera (nome)."""
+
+    materiale_id: str = ""
+    nome: str = ""
+    quantita: float = 1.0
+    unita: str = "pz"
+    prezzo_stimato: float = 0.0
+    note: str = ""
+
+
+class ListaItemPatch(BaseModel):
+    nome: str | None = None
+    quantita: float | None = None
+    unita: str | None = None
+    prezzo_stimato: float | None = None
+    comprato: bool | None = None
+    note: str | None = None
+
+
+@router.post("/{lavoro_id}/lista", response_model=Lavoro)
+async def aggiungi_voce_lista(lavoro_id: str, input: ListaItemIn):
+    await _get_lavoro(lavoro_id)
+    quantita = round(input.quantita, 2)
+    if quantita <= 0:
+        raise HTTPException(status_code=422, detail="La quantità deve essere maggiore di zero")
+
+    nome = input.nome.strip()
+    unita = input.unita
+    prezzo = input.prezzo_stimato
+    if input.materiale_id:
+        materiale = await db.materiali.find_one({"id": input.materiale_id})
+        if not materiale:
+            raise HTTPException(status_code=404, detail="Materiale non trovato")
+        nome = nome or materiale["nome"]
+        unita = materiale.get("unita_misura", "pz")
+        if not prezzo:
+            prezzo = materiale.get("prezzo_costo") or materiale.get("prezzo_unitario", 0.0)
+    if not nome:
+        raise HTTPException(status_code=422, detail="Indica un materiale o una descrizione")
+
+    item = ListaItem(
+        materiale_id=input.materiale_id,
+        nome=nome,
+        quantita=quantita,
+        unita=unita,
+        prezzo_stimato=round(prezzo, 2),
+        note=input.note,
+    )
+    doc = await db.lavori.find_one_and_update(
+        {"id": lavoro_id}, {"$push": {"lista_spesa": item.model_dump()}}, return_document=True
+    )
+    return Lavoro(**doc)
+
+
+@router.patch("/{lavoro_id}/lista/{item_id}", response_model=Lavoro)
+async def modifica_voce_lista(lavoro_id: str, item_id: str, input: ListaItemPatch):
+    doc = await _get_lavoro(lavoro_id)
+    item = next((i for i in doc.get("lista_spesa", []) if i.get("id") == item_id), None)
+    if not item:
+        raise HTTPException(status_code=404, detail="Voce della lista non trovata")
+    patch = {k: v for k, v in input.model_dump().items() if v is not None}
+    if "quantita" in patch:
+        patch["quantita"] = round(patch["quantita"], 2)
+        if patch["quantita"] <= 0:
+            raise HTTPException(status_code=422, detail="La quantità deve essere maggiore di zero")
+    if "nome" in patch and not patch["nome"].strip():
+        raise HTTPException(status_code=422, detail="La descrizione non può essere vuota")
+    updated = await db.lavori.find_one_and_update(
+        {"id": lavoro_id, "lista_spesa.id": item_id},
+        {"$set": {f"lista_spesa.$.{k}": v for k, v in patch.items()}},
+        return_document=True,
+    )
+    return Lavoro(**(updated or doc))
+
+
+@router.delete("/{lavoro_id}/lista/{item_id}", response_model=Lavoro)
+async def elimina_voce_lista(lavoro_id: str, item_id: str):
+    doc = await _get_lavoro(lavoro_id)
+    if not any(i.get("id") == item_id for i in doc.get("lista_spesa", [])):
+        raise HTTPException(status_code=404, detail="Voce della lista non trovata")
+    updated = await db.lavori.find_one_and_update(
+        {"id": lavoro_id}, {"$pull": {"lista_spesa": {"id": item_id}}}, return_document=True
     )
     return Lavoro(**updated)
 

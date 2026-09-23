@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Clock, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import type { Lavoro, Materiale, Preventivo, PreventivoInput } from "@/lib/types";
 import { fmtDate, fmtEuro, parseNum } from "@/lib/format";
@@ -79,6 +79,7 @@ export default function PreventivoEditor() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [initialized, setInitialized] = useState(false);
   const [lavoroImport, setLavoroImport] = useState("");
+  const [lavoroImportMat, setLavoroImportMat] = useState("");
 
   const { data: materiali } = useQuery({
     queryKey: ["materiali"],
@@ -222,6 +223,28 @@ export default function PreventivoEditor() {
     toast.success(`Importate ${voci.length} voci di manodopera dal cantiere`);
   };
 
+  const importaLista = () => {
+    const lavoro = lavori?.find((l) => l.id === lavoroImportMat);
+    if (!lavoro) return;
+    const voci = (lavoro.lista_spesa ?? []).filter((i) => i.quantita > 0);
+    if (voci.length === 0) {
+      toast.info("La lista materiali di questo cantiere è vuota");
+      return;
+    }
+    const nuove: MatRow[] = voci.map((i) => ({
+      materiale_id: i.materiale_id,
+      nome: i.nome,
+      unita: i.unita,
+      prezzo_unitario: String(i.prezzo_stimato),
+      quantita: String(i.quantita),
+    }));
+    setForm((f) => ({
+      ...f,
+      matRows: [...f.matRows.filter((r) => r.materiale_id || r.nome.trim()), ...nuove],
+    }));
+    toast.success(`Importate ${voci.length} voci dalla lista materiali`);
+  };
+
   const onMaterialPick = (idx: number, materialeId: string) => {
     const m = materiali?.find((x) => x.id === materialeId);
     setMat(idx, {
@@ -238,7 +261,7 @@ export default function PreventivoEditor() {
       return;
     }
     if (
-      !form.matRows.some((r) => r.materiale_id) &&
+      !form.matRows.some((r) => r.materiale_id || r.nome.trim()) &&
       !form.manRows.some((r) => r.descrizione.trim())
     ) {
       toast.error("Aggiungi almeno una voce di materiale o manodopera");
@@ -254,7 +277,7 @@ export default function PreventivoEditor() {
       data_emissione: form.data_emissione,
       validita_giorni: Number(form.validita_giorni) || 30,
       voci_materiali: form.matRows
-        .filter((r) => r.materiale_id)
+        .filter((r) => r.materiale_id || r.nome.trim())
         .map((r) => ({
           materiale_id: r.materiale_id,
           nome: r.nome,
@@ -431,20 +454,29 @@ export default function PreventivoEditor() {
                   >
                     <div className="col-span-12 space-y-1 sm:col-span-5">
                       <Label>Materiale</Label>
-                      <Select value={r.materiale_id} onValueChange={(v) => onMaterialPick(i, v)}>
-                        <SelectTrigger data-testid={`quote-line-material-select-${i}`} className="w-full">
-                          <SelectValue>
-                            {(v: string) => materiali?.find((m) => m.id === v)?.nome ?? "Seleziona…"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent className="border-[#1E293B] bg-[#111827]">
-                          {(materiali ?? []).map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {!r.materiale_id && r.nome ? (
+                        <Input
+                          data-testid={`quote-material-name-${i}`}
+                          value={r.nome}
+                          onChange={(e) => setMat(i, { nome: e.target.value })}
+                          placeholder="Descrizione materiale"
+                        />
+                      ) : (
+                        <Select value={r.materiale_id} onValueChange={(v) => onMaterialPick(i, v)}>
+                          <SelectTrigger data-testid={`quote-line-material-select-${i}`} className="w-full">
+                            <SelectValue>
+                              {(v: string) => materiali?.find((m) => m.id === v)?.nome ?? "Seleziona…"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="border-[#1E293B] bg-[#111827]">
+                            {(materiali ?? []).map((m) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                     <div className="col-span-4 space-y-1 sm:col-span-2">
                       <Label>Q.tà {r.unita !== "pz" ? `(${r.unita})` : ""}</Label>
@@ -490,6 +522,49 @@ export default function PreventivoEditor() {
                 <Button variant="outline" data-testid="btn-add-material-row" onClick={addMat}>
                   <Plus size={15} /> Aggiungi materiale
                 </Button>
+                <div className="rounded-lg border border-[#1E293B] bg-[#162032]/60 p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="flex-1 space-y-1.5">
+                      <Label htmlFor="q-import-lista">Importa lista materiali da cantiere</Label>
+                      <Select value={lavoroImportMat} onValueChange={setLavoroImportMat}>
+                        <SelectTrigger
+                          id="q-import-lista"
+                          data-testid="quote-import-lista-select"
+                          className="w-full"
+                        >
+                          <SelectValue>
+                            {(v: string) =>
+                              lavori?.find((l) => l.id === v)?.titolo ?? "Seleziona un lavoro…"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="border-[#1E293B] bg-[#111827]">
+                          {(lavori ?? []).map((l) => (
+                            <SelectItem
+                              key={l.id}
+                              value={l.id}
+                              data-testid={`quote-import-lista-option-${l.id}`}
+                            >
+                              {l.titolo} ({(l.lista_spesa ?? []).length} voci)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="outline"
+                      data-testid="btn-import-lista"
+                      onClick={importaLista}
+                      disabled={!lavoroImportMat}
+                    >
+                      <ShoppingCart size={15} /> Importa lista
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Porta nel preventivo la lista materiali del cantiere, con quantità e prezzi
+                    stimati (poi modificabili riga per riga).
+                  </p>
+                </div>
               </div>
             </Card>
 
