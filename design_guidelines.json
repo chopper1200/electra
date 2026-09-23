@@ -1,0 +1,243 @@
+{
+  "theme": "dark",
+  "archetype": "ARCHETYPE 2: THE PERFORMANCE PRO & TACTICAL CRAFTSMAN (Electrician / Impianti Elettrici)",
+  "design_rationale": "For an Italian professional electrician managing active jobs, materials stock, and client quotes (preventivi), the interface fuses tactical command-center precision (deep obsidian surfaces with high-visibility amber/copper wire volt accents) with mobile-first responsive architecture tailored for on-site operation from a smartphone or tablet. Number/date formats strictly follow Italian conventions (dd/MM/yyyy, € 1.250,00).",
+  "mobile_first_strategy": {
+    "touch_targets": "Minimum 48px height on interactive buttons and inputs for easy one-handed thumb navigation on mobile devices on job sites.",
+    "bottom_navigation": "Sticky bottom bar on mobile (<768px) with quick access to Dashboard, Lavori, Materiali, Preventivi, and prominent '+' FAB for adding jobs/materials on the fly.",
+    "responsive_tables": "Tables transform into touch-friendly cards on mobile viewports with quick action drawers.",
+    "quick_actions": "One-tap direct calling (tel: link) and WhatsApp messaging for client contacts."
+  },
+  "fonts": {
+    "heading": "Outfit Variable",
+    "body": "IBM Plex Sans",
+    "mono": "JetBrains Mono Variable",
+    "import_statement": "@import \"@fontsource-variable/outfit\";\n@import \"@fontsource/ibm-plex-sans\";\n@import \"@fontsource-variable/jetbrains-mono\";",
+    "css_theme_vars": {
+      "--font-heading": "'Outfit Variable', sans-serif",
+      "--font-sans": "'IBM Plex Sans', sans-serif",
+      "--font-mono": "'JetBrains Mono Variable', monospace"
+    }
+  },
+  "typography": {
+    "scale_px": {
+      "display": 48,
+      "h1": 36,
+      "h2": 28,
+      "h3": 20,
+      "h4": 18,
+      "body": 15,
+      "caption": 13
+    },
+    "rules": {
+      "headings": "font-heading font-bold tracking-tight text-slate-100",
+      "subheadings": "font-sans font-medium text-slate-300",
+      "body": "font-sans text-sm sm:text-base text-slate-300 leading-relaxed",
+      "labels": "font-sans uppercase text-xs tracking-wider font-semibold text-slate-400",
+      "numbers_and_currency": "font-mono font-medium tracking-tight"
+    }
+  },
+  "colors": {
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#090D14",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "link": "#38BDF8",
+          "error": "#F87171",
+          "success": "#34D399",
+          "warning": "#FBBF24"
+        }
+      },
+      {
+        "name": "panel",
+        "kind": "solid",
+        "bg": "#0F172A",
+        "on_bg": "#F1F5F9",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "border": "#334155",
+          "hover": "#1E293B",
+          "highlight": "#F59E0B"
+        }
+      },
+      {
+        "name": "card_elevated",
+        "kind": "solid",
+        "bg": "#1E293B",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#CBD5E1",
+        "roles": {
+          "border": "#475569",
+          "accent_badge": "#F59E0B"
+        }
+      },
+      {
+        "name": "sidebar_and_bottom_nav",
+        "kind": "solid",
+        "bg": "#06090E",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#64748B",
+        "roles": {
+          "active_bg": "#1E293B",
+          "active_text": "#F59E0B",
+          "active_indicator": "#F59E0B"
+        }
+      },
+      {
+        "name": "badge_da_iniziare",
+        "kind": "solid",
+        "bg": "#1E293B",
+        "on_bg": "#94A3B8",
+        "on_bg_muted": "#64748B"
+      },
+      {
+        "name": "badge_in_corso",
+        "kind": "solid",
+        "bg": "#451A03",
+        "on_bg": "#FDE68A",
+        "on_bg_muted": "#F59E0B"
+      },
+      {
+        "name": "badge_completato",
+        "kind": "solid",
+        "bg": "#064E3B",
+        "on_bg": "#A7F3D0",
+        "on_bg_muted": "#34D399"
+      },
+      {
+        "name": "badge_preventivo_bozza",
+        "kind": "solid",
+        "bg": "#334155",
+        "on_bg": "#E2E8F0",
+        "on_bg_muted": "#94A3B8"
+      },
+      {
+        "name": "badge_preventivo_inviato",
+        "kind": "solid",
+        "bg": "#0C4A6E",
+        "on_bg": "#BAE6FD",
+        "on_bg_muted": "#38BDF8"
+      },
+      {
+        "name": "badge_preventivo_accettato",
+        "kind": "solid",
+        "bg": "#064E3B",
+        "on_bg": "#A7F3D0",
+        "on_bg_muted": "#34D399"
+      },
+      {
+        "name": "badge_preventivo_rifiutato",
+        "kind": "solid",
+        "bg": "#450A0A",
+        "on_bg": "#FECACA",
+        "on_bg_muted": "#F87171"
+      },
+      {
+        "name": "printable_sheet",
+        "kind": "solid",
+        "bg": "#FFFFFF",
+        "on_bg": "#0F172A",
+        "on_bg_muted": "#475569",
+        "roles": {
+          "table_border": "#CBD5E1",
+          "table_header_bg": "#F8FAFC",
+          "accent": "#B45309"
+        }
+      }
+    ],
+    "accent": "#F59E0B",
+    "on_accent": "#000000",
+    "accent_hover": "#D97706",
+    "accent_subtle": "#FEF3C7"
+  },
+  "entry_surfaces": {
+    "/": "High-density dark command center dashboard with electric volt accents: KPI metric tiles at top, active lavori cards in center, pending preventivi ledger on right, and low-stock alerts panel with mobile bottom nav.",
+    "/lavori": "Filterable kanban and mobile-card / data table view of electrical jobs with client contact fast-dial/WhatsApp links, real-time status switches, linked materials used, and total billing.",
+    "/materiali": "Inventory & catalogue workstation with instant search, category filtering (Cavi, Magnetotermici, Prese/Interruttori, Canaline, Quadri, Illuminazione), low-stock warning chips, unit pricing, and quick in/out adjustments.",
+    "/preventivi": "List of quotes with status badges, client name, expiration, and total value with quick actions (duplica, crea lavoro da preventivo, stampa/PDF).",
+    "/preventivi/nuovo": "Interactive Quote Builder studio with customer info, dynamic line items for materials (auto-completes from catalogue) + labor hours (tariffa oraria), auto-calculated IVA and totals, with live PDF preview pane.",
+    "/preventivi/:id": "Detailed printable and exportable quote sheet with electrician business header, breakdown tables, terms of payment, and digital approval status."
+  },
+  "visual_enhancers": {
+    "tactical_borders": "1px border with border-slate-800/80 and subtle inner highlight for sharp hardware feel",
+    "copper_glow": "shadow-[0_0_15px_rgba(245,158,11,0.15)] on active cards and primary CTA buttons",
+    "print_media_css": "@media print { body { background: white !important; color: black !important; } .no-print { display: none !important; } .print-only { display: block !important; } }",
+    "voltage_iconography": "Zap, Wrench, ShieldCheck, Box, FileText, Plus, Calculator, Phone, MapPin, CheckCircle2, Clock, Euro, MessageCircle"
+  },
+  "navigation": {
+    "brand_name": "VoltCraft Elettrica",
+    "sub_label": "Gestione Lavori, Materiali & Preventivi",
+    "items": [
+      { "id": "dashboard", "label": "Dashboard", "path": "/", "icon": "LayoutDashboard" },
+      { "id": "lavori", "label": "Lavori", "path": "/lavori", "icon": "Wrench" },
+      { "id": "materiali", "label": "Materiali", "path": "/materiali", "icon": "Package" },
+      { "id": "preventivi", "label": "Preventivi", "path": "/preventivi", "icon": "FileSpreadsheet" }
+    ],
+    "mobile_bar": true
+  },
+  "domain_data_models": {
+    "lavoro": {
+      "fields": ["id", "titolo", "cliente_nome", "cliente_telefono", "cliente_indirizzo", "descrizione", "stato (da_iniziare | in_corso | completato)", "data_inizio", "data_fine_prevista", "prezzo_pattuito", "materiali_usati", "ore_manodopera", "note"]
+    },
+    "materiale": {
+      "fields": ["id", "codice_art", "nome", "categoria (Cavi e Conduttori, Magnetotermici e Quadri, Prese e Interruttori, Tubi e Canaline, Illuminazione, Minuteria e Fissaggi)", "unita_misura (pz, m, conf, rotolo)", "prezzo_unitario", "prezzo_costo", "quantita_disponibile", "scorta_minima", "fornitore"]
+    },
+    "preventivo": {
+      "fields": ["id", "numero_progressivo", "data_emissione", "validita_giorni", "cliente_nome", "cliente_telefono", "cliente_email", "cliente_indirizzo", "cliente_codice_fiscale_piva", "titolo_intervento", "voci_materiali [{materiale_id, nome, quantita, unita, prezzo_unitario, subtotale}]", "voci_manodopera [{descrizione, ore, tariffa_oraria, subtotale}]", "sconto_percentuale", "aliquota_iva (22% o 10% agevolata)", "totale_imponibile", "totale_iva", "totale_preventivo", "stato (bozza | inviato | accettato | rifiutato)", "note_condizioni"]
+    }
+  },
+  "component_paths": {
+    "dashboard_page": "/app/frontend/src/pages/Dashboard.tsx",
+    "lavori_page": "/app/frontend/src/pages/Lavori.tsx",
+    "materiali_page": "/app/frontend/src/pages/Materiali.tsx",
+    "preventivi_page": "/app/frontend/src/pages/Preventivi.tsx",
+    "preventivo_editor_page": "/app/frontend/src/pages/PreventivoEditor.tsx",
+    "preventivo_view_page": "/app/frontend/src/pages/PreventivoDetail.tsx",
+    "navigation_shell": "/app/frontend/src/components/Navbar.tsx",
+    "bottom_mobile_nav": "/app/frontend/src/components/MobileNav.tsx",
+    "stat_card": "/app/frontend/src/components/StatCard.tsx",
+    "job_modal": "/app/frontend/src/components/JobModal.tsx",
+    "material_modal": "/app/frontend/src/components/MaterialModal.tsx",
+    "material_usage_modal": "/app/frontend/src/components/RecordMaterialUsageModal.tsx"
+  },
+  "testing_attributes": {
+    "rule": "Every button, input, tab, select, modal trigger, card, and actionable row MUST have a distinct data-testid.",
+    "examples": [
+      "data-testid='nav-dashboard-link'",
+      "data-testid='nav-lavori-link'",
+      "data-testid='nav-materiali-link'",
+      "data-testid='nav-preventivi-link'",
+      "data-testid='mobile-nav-dashboard'",
+      "data-testid='mobile-nav-lavori'",
+      "data-testid='mobile-nav-materiali'",
+      "data-testid='mobile-nav-preventivi'",
+      "data-testid='btn-create-job'",
+      "data-testid='btn-create-material'",
+      "data-testid='btn-create-quote'",
+      "data-testid='kpi-active-jobs'",
+      "data-testid='kpi-pending-quotes'",
+      "data-testid='kpi-low-stock'",
+      "data-testid='kpi-revenue-projected'",
+      "data-testid='quote-line-material-select'",
+      "data-testid='quote-labor-hours-input'",
+      "data-testid='quote-labor-rate-input'",
+      "data-testid='quote-total-display'",
+      "data-testid='btn-print-quote'",
+      "data-testid='btn-accept-quote'",
+      "data-testid='btn-convert-quote-to-job'"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Language is strictly Italian throughout all UI labels, form fields, table headers, toasts, and seed data.",
+    "Currency formatting: standard Italian euro display (e.g. '1.250,00 €' or '€ 1.250,00'). Date format: DD/MM/YYYY.",
+    "Mobile-first responsive design: ensure all modals, forms, and lists render cleanly on narrow screens (375px - 425px) with comfortable tap targets and sticky action bars.",
+    "In backend/seed.py, seed realistic electrician data: 5-8 common electrical jobs (e.g. 'Rifacimento impianto appartamento Via Roma', 'Installazione Wallbox ricarica auto', 'Sostituzione quadro salvavita con magnetotermici differenziali'), 15-20 common Italian electrical materials (BTicino Living Now prese, interruttori bipolari, cavo FS18 3G2.5, differenziale Gewiss 25A 30mA, tubi corrugati, faretti LED), and 4-6 realistic quotes in various statuses.",
+    "Implement 'Crea Lavoro da Preventivo': when a quote is marked accepted, one click creates a corresponding Job pre-populated with client info and allocated materials.",
+    "Provide Material Stock adjustment dialog and 'Registra Materiali Usati nel Lavoro' so the electrician can log actual cables/switches used on a job site directly from their phone.",
+    "Ensure the printable view for quotes is clean, elegant, and ready for browser printing/PDF save with professional electrician company header."
+  ]
+}
