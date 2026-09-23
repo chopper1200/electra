@@ -13,6 +13,26 @@ export interface MaterialUsage {
   prezzo_unitario: number;
 }
 
+export interface Cliente {
+  id: string;
+  nome: string;
+  telefono: string;
+  email: string;
+  indirizzo: string;
+  piva: string;
+  note: string;
+  created_at: string;
+}
+
+export interface ClienteInput {
+  nome: string;
+  telefono: string;
+  email: string;
+  indirizzo: string;
+  piva: string;
+  note: string;
+}
+
 export interface OraLavorata {
   id: string;
   data: string;
@@ -121,6 +141,9 @@ export interface Preventivo {
   stato: StatoPreventivo;
   note_condizioni: string;
   lavoro_id: string;
+  data_scadenza: string;
+  giorni_alla_scadenza: number;
+  scaduto: boolean;
   created_at: string;
 }
 
@@ -152,6 +175,14 @@ export interface PreventivoInput {
   note_condizioni: string;
 }
 
+export interface OrePerLavoro {
+  lavoro_id: string;
+  titolo: string;
+  cliente_nome: string;
+  ore: number;
+  valore: number;
+}
+
 export interface DashboardStats {
   lavori_da_iniziare: number;
   lavori_in_corso: number;
@@ -160,7 +191,14 @@ export interface DashboardStats {
   valore_preventivi_attesa: number;
   fatturato_completato: number;
   valore_magazzino: number;
+  clienti_totali: number;
+  mese_corrente: string;
+  ore_mese: number;
+  valore_ore_mese: number;
+  tariffa_media_mese: number;
+  ore_mese_per_lavoro: OrePerLavoro[];
   materiali_sotto_scorta: Materiale[];
   ultimi_lavori: Lavoro[];
   preventivi_recenti: Preventivo[];
+  preventivi_scaduti: Preventivo[];
 }

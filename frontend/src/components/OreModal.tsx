@@ -109,7 +109,7 @@ export default function OreModal({ open, onOpenChange, lavoro }: OreModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="ore-modal"
-        className="max-h-[90svh] overflow-y-auto border-slate-800 bg-[#0F172A] sm:max-w-lg"
+        className="max-h-[90svh] overflow-y-auto border-[#1E293B] bg-[#111827] sm:max-w-lg"
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-slate-100">
@@ -123,7 +123,7 @@ export default function OreModal({ open, onOpenChange, lavoro }: OreModalProps) 
 
         <div className="space-y-2" data-testid="ore-list">
           {voci.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-700 px-4 py-3 text-sm text-slate-400">
+            <p className="rounded-lg border border-dashed border-[#27364F] px-4 py-3 text-sm text-slate-400">
               Nessuna ora registrata per questo lavoro.
             </p>
           ) : (
@@ -131,7 +131,7 @@ export default function OreModal({ open, onOpenChange, lavoro }: OreModalProps) 
               <div
                 key={e.id}
                 data-testid={`ore-row-${e.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-[#1E293B] px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-lg border border-[#1E293B] bg-[#162032] px-3 py-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-100">
@@ -146,7 +146,7 @@ export default function OreModal({ open, onOpenChange, lavoro }: OreModalProps) 
                   <Badge
                     variant="outline"
                     data-testid={`ore-in-preventivo-${e.id}`}
-                    className="shrink-0 border-sky-500/30 bg-[#0C4A6E] text-[#BAE6FD]"
+                    className="shrink-0 border-sky-500/30 bg-[#0C3656] text-[#60A5FA]"
                   >
                     In preventivo
                   </Badge>
@@ -172,7 +172,7 @@ export default function OreModal({ open, onOpenChange, lavoro }: OreModalProps) 
           )}
         </div>
 
-        <div className="space-y-3 rounded-lg border border-slate-800 bg-[#1E293B]/60 p-3">
+        <div className="space-y-3 rounded-lg border border-[#1E293B] bg-[#162032]/60 p-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Nuova voce
           </p>

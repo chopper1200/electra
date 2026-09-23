@@ -7,8 +7,9 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from lib.dates import today_iso
+from lib.dates import aggiungi_giorni, giorni_tra, today_iso
 from lib.db import db
+from routers.clienti import upsert_cliente
 from routers.lavori import Lavoro, MaterialUsage
 
 router = APIRouter(prefix="/preventivi", tags=["preventivi"])
@@ -61,6 +62,9 @@ class Preventivo(BaseModel):
     stato: StatoPreventivo = "bozza"
     note_condizioni: str = ""
     lavoro_id: str = ""
+    data_scadenza: str = ""
+    giorni_alla_scadenza: int = 0
+    scaduto: bool = False
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -98,6 +102,26 @@ class PreventivoIn(BaseModel):
 
 class StatoIn(BaseModel):
     stato: StatoPreventivo
+
+
+def con_scadenza(doc: dict) -> dict:
+    """Arricchisce il documento con i campi di scadenza calcolati sulla data del server.
+
+    Un preventivo è «scaduto» solo se è stato inviato e il cliente non ha ancora
+    risposto: bozze, accettati e rifiutati non richiedono follow-up.
+    """
+    emissione = str(doc.get("data_emissione") or "")[:10]
+    validita = int(doc.get("validita_giorni") or 0)
+    if not emissione:
+        return {**doc, "data_scadenza": "", "giorni_alla_scadenza": 0, "scaduto": False}
+    scadenza = aggiungi_giorni(emissione, validita)
+    residui = giorni_tra(today_iso(), scadenza)
+    return {
+        **doc,
+        "data_scadenza": scadenza,
+        "giorni_alla_scadenza": residui,
+        "scaduto": doc.get("stato") == "inviato" and residui < 0,
+    }
 
 
 def _build_doc(input: PreventivoIn, *, numero: str, base: dict | None = None) -> dict:
@@ -203,22 +227,29 @@ async def _next_numero() -> str:
 @router.get("", response_model=list[Preventivo])
 async def lista_preventivi():
     docs = await db.preventivi.find().sort("created_at", -1).to_list(1000)
-    return [Preventivo(**d) for d in docs]
+    return [Preventivo(**con_scadenza(d)) for d in docs]
 
 
 @router.post("", response_model=Preventivo, status_code=201)
 async def crea_preventivo(input: PreventivoIn):
     numero = await _next_numero()
-    preventivo = Preventivo(**_build_doc(input, numero=numero))
+    preventivo = Preventivo(**con_scadenza(_build_doc(input, numero=numero)))
     doc = preventivo.model_dump()
     await db.preventivi.insert_one(doc)
     await _sync_ore_lavorate(preventivo.id, doc["voci_manodopera"])
+    await upsert_cliente(
+        input.cliente_nome,
+        telefono=input.cliente_telefono,
+        email=input.cliente_email,
+        indirizzo=input.cliente_indirizzo,
+        piva=input.cliente_piva,
+    )
     return preventivo
 
 
 @router.get("/{preventivo_id}", response_model=Preventivo)
 async def dettaglio_preventivo(preventivo_id: str):
-    return Preventivo(**await _get_preventivo(preventivo_id))
+    return Preventivo(**con_scadenza(await _get_preventivo(preventivo_id)))
 
 
 @router.put("/{preventivo_id}", response_model=Preventivo)
@@ -231,7 +262,14 @@ async def aggiorna_preventivo(preventivo_id: str, input: PreventivoIn):
     doc = _build_doc(input, numero=base["numero"], base=base)
     await db.preventivi.update_one({"id": preventivo_id}, {"$set": doc})
     await _sync_ore_lavorate(preventivo_id, doc["voci_manodopera"])
-    return Preventivo(**{**base, **doc})
+    await upsert_cliente(
+        input.cliente_nome,
+        telefono=input.cliente_telefono,
+        email=input.cliente_email,
+        indirizzo=input.cliente_indirizzo,
+        piva=input.cliente_piva,
+    )
+    return Preventivo(**con_scadenza({**base, **doc}))
 
 
 @router.patch("/{preventivo_id}/stato", response_model=Preventivo)
@@ -241,7 +279,24 @@ async def cambia_stato(preventivo_id: str, input: StatoIn):
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Preventivo non trovato")
-    return Preventivo(**doc)
+    return Preventivo(**con_scadenza(doc))
+
+
+class RinnovoIn(BaseModel):
+    validita_giorni: int = 30
+
+
+@router.patch("/{preventivo_id}/rinnova", response_model=Preventivo)
+async def rinnova_validita(preventivo_id: str, input: RinnovoIn):
+    """Follow-up di un preventivo scaduto: ri-emette da oggi con nuova validità."""
+    await _get_preventivo(preventivo_id)
+    giorni = input.validita_giorni if input.validita_giorni > 0 else 30
+    doc = await db.preventivi.find_one_and_update(
+        {"id": preventivo_id},
+        {"$set": {"data_emissione": today_iso(), "validita_giorni": giorni, "stato": "inviato"}},
+        return_document=True,
+    )
+    return Preventivo(**con_scadenza(doc))
 
 
 @router.post("/{preventivo_id}/duplica", response_model=Preventivo, status_code=201)
@@ -261,7 +316,7 @@ async def duplica_preventivo(preventivo_id: str):
         for voce in base.get("voci_manodopera", [])
     ]
     await db.preventivi.insert_one(nuovo)
-    return Preventivo(**nuovo)
+    return Preventivo(**con_scadenza(nuovo))
 
 
 @router.post("/{preventivo_id}/converti", response_model=Lavoro, status_code=201)

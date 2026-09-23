@@ -130,9 +130,9 @@ export default function PreventivoDetail() {
       </div>
 
       {isLoading ? (
-        <div className="mx-auto h-[600px] w-full max-w-3xl animate-pulse rounded-xl bg-[#0F172A]" />
+        <div className="mx-auto h-[600px] w-full max-w-3xl animate-pulse rounded-xl bg-[#111827]" />
       ) : isError || !p ? (
-        <Card className="border-slate-800/80 bg-[#0F172A] p-8 text-center" data-testid="quote-detail-error">
+        <Card className="border-[#1E293B] bg-[#111827] p-8 text-center" data-testid="quote-detail-error">
           <p className="text-sm text-slate-400">Preventivo non disponibile al momento.</p>
           <Link
             to="/preventivi"
@@ -191,7 +191,7 @@ export default function PreventivoDetail() {
                 Stato
               </p>
               <div className="mt-1">
-                <StatusBadge kind="preventivo" stato={p.stato} />
+                <StatusBadge kind="preventivo" stato={p.stato} scaduto={p.scaduto} />
               </div>
               {p.lavoro_id && (
                 <p

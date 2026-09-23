@@ -93,7 +93,7 @@ export default function Lavori() {
           href={`tel:${l.cliente_telefono.replace(/\s/g, "")}`}
           data-testid={`job-call-${l.id}`}
           aria-label="Chiama cliente"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-slate-800 hover:text-sky-400"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-[#1E293B] hover:text-sky-400"
         >
           <Phone size={15} />
         </a>
@@ -103,7 +103,7 @@ export default function Lavori() {
           rel="noreferrer"
           data-testid={`job-whatsapp-${l.id}`}
           aria-label="Scrivi su WhatsApp"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-slate-800 hover:text-emerald-400"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-[#1E293B] hover:text-emerald-400"
         >
           <MessageCircle size={15} />
         </a>
@@ -115,11 +115,11 @@ export default function Lavori() {
       <DropdownMenuTrigger
         data-testid={`job-actions-${l.id}`}
         aria-label="Azioni lavoro"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-[#1E293B] hover:text-slate-100"
       >
         <MoreVertical size={16} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-slate-800 bg-[#0F172A]">
+      <DropdownMenuContent align="end" className="border-[#1E293B] bg-[#111827]">
         <DropdownMenuItem
           data-testid={`job-usage-${l.id}`}
           onClick={() => setUsageTarget(l)}
@@ -160,7 +160,7 @@ export default function Lavori() {
       <SelectTrigger size="sm" data-testid={`job-status-${l.id}`} className="w-[140px]">
         <SelectValue>{(v: string) => STATO_LAVORO_LABELS[v as StatoLavoro]}</SelectValue>
       </SelectTrigger>
-      <SelectContent className="border-slate-800 bg-[#0F172A]">
+      <SelectContent className="border-[#1E293B] bg-[#111827]">
         {STATI.map((s) => (
           <SelectItem key={s} value={s} data-testid={`job-stato-option-${s}`}>
             {STATO_LAVORO_LABELS[s]}
@@ -199,8 +199,8 @@ export default function Lavori() {
             onClick={() => setFiltro(f.value)}
             className={`min-h-9 rounded-full border px-4 text-sm font-medium transition-colors ${
               filtro === f.value
-                ? "border-amber-500/60 bg-[#451A03] text-[#FDE68A]"
-                : "border-slate-700 bg-[#0F172A] text-slate-300 hover:border-slate-500"
+                ? "border-amber-500/60 bg-[#3D2708] text-[#FBBF24]"
+                : "border-[#27364F] bg-[#111827] text-slate-300 hover:border-slate-500"
             }`}
           >
             {f.label}
@@ -211,15 +211,15 @@ export default function Lavori() {
       {isLoading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-[#0F172A]" />
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-[#111827]" />
           ))}
         </div>
       ) : isError ? (
-        <p className="rounded-lg border border-slate-800 bg-[#0F172A] px-4 py-6 text-sm text-slate-400" data-testid="lavori-error">
+        <p className="rounded-lg border border-[#1E293B] bg-[#111827] px-4 py-6 text-sm text-slate-400" data-testid="lavori-error">
           Dati non disponibili al momento.
         </p>
       ) : filtrati.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 px-4 py-12 text-center" data-testid="lavori-empty">
+        <div className="rounded-2xl border border-dashed border-[#27364F] px-4 py-12 text-center" data-testid="lavori-empty">
           <Wrench size={28} className="mx-auto text-slate-500" />
           <p className="mt-3 text-sm text-slate-400">
             Nessun lavoro in questo filtro. Creane uno per iniziare.
@@ -230,7 +230,7 @@ export default function Lavori() {
           {/* Vista tabella — desktop */}
           <Table data-testid="lavori-table" className="hidden md:table">
             <TableHeader>
-              <TableRow className="border-slate-800">
+              <TableRow className="border-[#1E293B]">
                 <TableHead className="text-slate-400">Lavoro</TableHead>
                 <TableHead className="text-slate-400">Stato</TableHead>
                 <TableHead className="text-slate-400">Inizio</TableHead>
@@ -241,7 +241,7 @@ export default function Lavori() {
             </TableHeader>
             <TableBody>
               {filtrati.map((l) => (
-                <TableRow key={l.id} data-testid={`job-row-${l.id}`} className="border-slate-800">
+                <TableRow key={l.id} data-testid={`job-row-${l.id}`} className="border-[#1E293B]">
                   <TableCell>
                     <p className="font-medium text-slate-100">{l.titolo}</p>
                     <p className="text-sm text-slate-400">
@@ -282,7 +282,7 @@ export default function Lavori() {
               <div
                 key={l.id}
                 data-testid={`job-card-${l.id}`}
-                className="rounded-xl border border-slate-800 bg-[#0F172A] p-4"
+                className="rounded-xl border border-[#1E293B] bg-[#111827] p-4"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -301,7 +301,7 @@ export default function Lavori() {
                   </span>
                   <span className="text-slate-100">{fmtEuro(l.prezzo_pattuito)}</span>
                 </div>
-                <div className="mt-3 flex items-center gap-1 border-t border-slate-800 pt-3">
+                <div className="mt-3 flex items-center gap-1 border-t border-[#1E293B] pt-3">
                   {contatti(l)}
                   <Button
                     variant="outline"

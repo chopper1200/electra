@@ -17,6 +17,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 from lib.db import client, db, ensure_indexes
+from routers.clienti import router as clienti_router
 from routers.dashboard import router as dashboard_router
 from routers.lavori import router as lavori_router
 from routers.materiali import router as materiali_router
@@ -68,6 +69,7 @@ async def get_status_checks():
 api_router.include_router(lavori_router)
 api_router.include_router(materiali_router)
 api_router.include_router(preventivi_router)
+api_router.include_router(clienti_router)
 api_router.include_router(dashboard_router)
 
 # Include the router in the main app

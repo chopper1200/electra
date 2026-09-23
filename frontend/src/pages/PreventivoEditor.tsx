@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, Plus, Trash2 } from "lucide-react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import type { Lavoro, Materiale, Preventivo, PreventivoInput } from "@/lib/types";
 import { fmtDate, fmtEuro, parseNum } from "@/lib/format";
+import ClientePicker from "@/components/ClientePicker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -306,15 +307,30 @@ export default function PreventivoEditor() {
       </div>
 
       {isEdit && quoteLoading && !initialized ? (
-        <div className="h-96 animate-pulse rounded-xl bg-[#0F172A]" />
+        <div className="h-96 animate-pulse rounded-xl bg-[#111827]" />
       ) : (
         <div className="grid gap-5 lg:grid-cols-3">
           <div className="space-y-5 lg:col-span-2">
-            <Card data-testid="editor-cliente" className="border-slate-800/80 bg-[#0F172A] p-5">
+            <Card data-testid="editor-cliente" className="border-[#1E293B] bg-[#111827] p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Cliente e intervento
               </p>
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <ClientePicker
+                    testId="quote-cliente-picker"
+                    onPick={(c) =>
+                      setForm((f) => ({
+                        ...f,
+                        cliente_nome: c.nome,
+                        cliente_telefono: c.telefono || f.cliente_telefono,
+                        cliente_email: c.email || f.cliente_email,
+                        cliente_indirizzo: c.indirizzo || f.cliente_indirizzo,
+                        cliente_piva: c.piva || f.cliente_piva,
+                      }))
+                    }
+                  />
+                </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="q-cliente">Nome cliente *</Label>
                   <Input
@@ -397,13 +413,13 @@ export default function PreventivoEditor() {
               </div>
             </Card>
 
-            <Card data-testid="editor-materiali" className="border-slate-800/80 bg-[#0F172A] p-5">
+            <Card data-testid="editor-materiali" className="border-[#1E293B] bg-[#111827] p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Materiali (dal catalogo)
               </p>
               <div className="mt-4 space-y-3">
                 {form.matRows.length === 0 && (
-                  <p className="rounded-lg border border-dashed border-slate-700 px-4 py-3 text-sm text-slate-400">
+                  <p className="rounded-lg border border-dashed border-[#27364F] px-4 py-3 text-sm text-slate-400">
                     Nessun materiale: aggiungi le voci dal catalogo.
                   </p>
                 )}
@@ -411,7 +427,7 @@ export default function PreventivoEditor() {
                   <div
                     key={i}
                     data-testid={`quote-material-row-${i}`}
-                    className="grid grid-cols-12 items-end gap-2 rounded-lg border border-slate-800 bg-[#1E293B] p-3"
+                    className="grid grid-cols-12 items-end gap-2 rounded-lg border border-[#1E293B] bg-[#162032] p-3"
                   >
                     <div className="col-span-12 space-y-1 sm:col-span-5">
                       <Label>Materiale</Label>
@@ -421,7 +437,7 @@ export default function PreventivoEditor() {
                             {(v: string) => materiali?.find((m) => m.id === v)?.nome ?? "Seleziona…"}
                           </SelectValue>
                         </SelectTrigger>
-                        <SelectContent className="border-slate-800 bg-[#0F172A]">
+                        <SelectContent className="border-[#1E293B] bg-[#111827]">
                           {(materiali ?? []).map((m) => (
                             <SelectItem key={m.id} value={m.id}>
                               {m.nome}
@@ -477,7 +493,7 @@ export default function PreventivoEditor() {
               </div>
             </Card>
 
-            <Card data-testid="editor-manodopera" className="border-slate-800/80 bg-[#0F172A] p-5">
+            <Card data-testid="editor-manodopera" className="border-[#1E293B] bg-[#111827] p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Manodopera
               </p>
@@ -486,7 +502,7 @@ export default function PreventivoEditor() {
                   <div
                     key={i}
                     data-testid={`quote-labor-row-${i}`}
-                    className="grid grid-cols-12 items-end gap-2 rounded-lg border border-slate-800 bg-[#1E293B] p-3"
+                    className="grid grid-cols-12 items-end gap-2 rounded-lg border border-[#1E293B] bg-[#162032] p-3"
                   >
                     <div className="col-span-12 space-y-1 sm:col-span-5">
                       <Label>Descrizione</Label>
@@ -541,7 +557,7 @@ export default function PreventivoEditor() {
                 <Button variant="outline" data-testid="btn-add-labor-row" onClick={addMan}>
                   <Plus size={15} /> Aggiungi manodopera
                 </Button>
-                <div className="rounded-lg border border-slate-800 bg-[#1E293B]/60 p-3">
+                <div className="rounded-lg border border-[#1E293B] bg-[#162032]/60 p-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div className="flex-1 space-y-1.5">
                       <Label htmlFor="q-import-lavoro">Importa ore da cantiere</Label>
@@ -557,7 +573,7 @@ export default function PreventivoEditor() {
                             }
                           </SelectValue>
                         </SelectTrigger>
-                        <SelectContent className="border-slate-800 bg-[#0F172A]">
+                        <SelectContent className="border-[#1E293B] bg-[#111827]">
                           {(lavori ?? []).map((l) => (
                             <SelectItem
                               key={l.id}
@@ -587,7 +603,7 @@ export default function PreventivoEditor() {
               </div>
             </Card>
 
-            <Card data-testid="editor-note" className="border-slate-800/80 bg-[#0F172A] p-5">
+            <Card data-testid="editor-note" className="border-[#1E293B] bg-[#111827] p-5">
               <Label htmlFor="q-note">Condizioni e note</Label>
               <Textarea
                 id="q-note"
@@ -603,7 +619,7 @@ export default function PreventivoEditor() {
           <div>
             <Card
               data-testid="quote-totals"
-              className="border-slate-800/80 bg-[#0F172A] p-5 lg:sticky lg:top-20"
+              className="border-[#1E293B] bg-[#111827] p-5 lg:sticky lg:top-20"
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Riepilogo
@@ -621,7 +637,7 @@ export default function PreventivoEditor() {
                   <dt className="text-slate-400">Sconto</dt>
                   <dd className="font-mono text-slate-100">−{fmtEuro(scontoImp)}</dd>
                 </div>
-                <div className="flex justify-between border-t border-slate-800 pt-2">
+                <div className="flex justify-between border-t border-[#1E293B] pt-2">
                   <dt className="text-slate-400">Imponibile</dt>
                   <dd className="font-mono text-slate-100">{fmtEuro(imponibile)}</dd>
                 </div>
@@ -659,7 +675,7 @@ export default function PreventivoEditor() {
                     <SelectTrigger id="q-iva" data-testid="quote-iva-select" className="w-full">
                       <SelectValue>{(v: string) => `${v}%`}</SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="border-slate-800 bg-[#0F172A]">
+                    <SelectContent className="border-[#1E293B] bg-[#111827]">
                       <SelectItem value="22" data-testid="quote-iva-22">
                         22%
                       </SelectItem>

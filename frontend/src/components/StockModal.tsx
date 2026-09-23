@@ -75,7 +75,7 @@ export default function StockModal({ open, onOpenChange, materiale }: StockModal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="stock-modal"
-        className="border-slate-800 bg-[#0F172A] sm:max-w-md"
+        className="border-[#1E293B] bg-[#111827] sm:max-w-md"
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-slate-100">Movimento di magazzino</DialogTitle>

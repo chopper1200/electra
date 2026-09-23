@@ -87,15 +87,15 @@ export default function Preventivi() {
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-44 animate-pulse rounded-xl bg-[#0F172A]" />
+            <div key={i} className="h-44 animate-pulse rounded-xl bg-[#111827]" />
           ))}
         </div>
       ) : isError ? (
-        <p className="rounded-lg border border-slate-800 bg-[#0F172A] px-4 py-6 text-sm text-slate-400" data-testid="preventivi-error">
+        <p className="rounded-lg border border-[#1E293B] bg-[#111827] px-4 py-6 text-sm text-slate-400" data-testid="preventivi-error">
           Dati non disponibili al momento.
         </p>
       ) : (preventivi ?? []).length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 px-4 py-12 text-center" data-testid="preventivi-empty">
+        <div className="rounded-2xl border border-dashed border-[#27364F] px-4 py-12 text-center" data-testid="preventivi-empty">
           <FileSpreadsheet size={28} className="mx-auto text-slate-500" />
           <p className="mt-3 text-sm text-slate-400">
             Nessun preventivo ancora. Crea il primo con «Nuovo preventivo».
@@ -107,11 +107,11 @@ export default function Preventivi() {
             <Card
               key={p.id}
               data-testid={`quote-card-${p.id}`}
-              className="flex flex-col border-slate-800/80 bg-[#0F172A] p-4"
+              className="flex flex-col border-[#1E293B] bg-[#111827] p-4"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono text-sm font-medium text-amber-400">{p.numero}</span>
-                <StatusBadge kind="preventivo" stato={p.stato} />
+                <StatusBadge kind="preventivo" stato={p.stato} scaduto={p.scaduto} />
               </div>
               <Link to={`/preventivi/${p.id}`} data-testid={`quote-link-${p.id}`} className="mt-2 block">
                 <p className="font-heading text-lg font-semibold text-slate-100">
@@ -122,13 +122,23 @@ export default function Preventivi() {
               <div className="mt-3 flex items-end justify-between gap-3">
                 <div className="text-xs text-slate-500">
                   <p>Emissione: {fmtDate(p.data_emissione)}</p>
-                  <p>Validità: {p.validita_giorni} giorni</p>
+                  {p.scaduto ? (
+                    <p className="font-medium text-red-400" data-testid={`quote-overdue-${p.id}`}>
+                      Scaduto da {Math.abs(p.giorni_alla_scadenza)} gg — ricontatta
+                    </p>
+                  ) : p.stato === "inviato" ? (
+                    <p data-testid={`quote-validity-${p.id}`}>
+                      Scade tra {p.giorni_alla_scadenza} gg
+                    </p>
+                  ) : (
+                    <p>Validità: {p.validita_giorni} giorni</p>
+                  )}
                 </div>
                 <p className="font-mono text-xl font-medium text-slate-100" data-testid={`quote-total-${p.id}`}>
                   {fmtEuro(p.totale_preventivo)}
                 </p>
               </div>
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-800 pt-3">
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#1E293B] pt-3">
                 <Link
                   to={`/preventivi/${p.id}`}
                   data-testid={`quote-open-${p.id}`}
@@ -145,11 +155,11 @@ export default function Preventivi() {
                   <DropdownMenuTrigger
                     data-testid={`quote-actions-${p.id}`}
                     aria-label="Azioni preventivo"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-[#1E293B] hover:text-slate-100"
                   >
                     <MoreVertical size={16} />
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="border-slate-800 bg-[#0F172A]">
+                  <DropdownMenuContent align="end" className="border-[#1E293B] bg-[#111827]">
                     {p.stato === "bozza" && (
                       <DropdownMenuItem
                         data-testid={`quote-edit-${p.id}`}

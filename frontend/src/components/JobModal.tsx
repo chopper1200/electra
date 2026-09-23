@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { apiPost, apiPut } from "@/lib/api";
 import type { Lavoro, LavoroInput, StatoLavoro } from "@/lib/types";
 import { parseNum, STATO_LAVORO_LABELS } from "@/lib/format";
+import ClientePicker from "@/components/ClientePicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -126,7 +127,7 @@ export default function JobModal({ open, onOpenChange, lavoro }: JobModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="job-modal"
-        className="max-h-[90svh] overflow-y-auto border-slate-800 bg-[#0F172A] sm:max-w-xl"
+        className="max-h-[90svh] overflow-y-auto border-[#1E293B] bg-[#111827] sm:max-w-xl"
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-slate-100">
@@ -138,6 +139,19 @@ export default function JobModal({ open, onOpenChange, lavoro }: JobModalProps) 
         </DialogHeader>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <ClientePicker
+              testId="job-cliente-picker"
+              onPick={(c) =>
+                setForm((f) => ({
+                  ...f,
+                  cliente_nome: c.nome,
+                  cliente_telefono: c.telefono || f.cliente_telefono,
+                  cliente_indirizzo: c.indirizzo || f.cliente_indirizzo,
+                }))
+              }
+            />
+          </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="job-titolo">Titolo *</Label>
             <Input

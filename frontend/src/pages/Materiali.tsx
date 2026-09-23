@@ -74,11 +74,11 @@ export default function Materiali() {
       <DropdownMenuTrigger
         data-testid={`material-actions-${m.id}`}
         aria-label="Azioni materiale"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-[#1E293B] hover:text-slate-100"
       >
         <MoreVertical size={16} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-slate-800 bg-[#0F172A]">
+      <DropdownMenuContent align="end" className="border-[#1E293B] bg-[#111827]">
         <DropdownMenuItem
           data-testid={`material-restock-${m.id}`}
           onClick={() => {
@@ -122,7 +122,7 @@ export default function Materiali() {
           <Badge
             variant="outline"
             data-testid={`material-low-badge-${m.id}`}
-            className="border-amber-500/40 bg-[#451A03] text-[#FDE68A]"
+            className="border-amber-500/40 bg-[#3D2708] text-[#FBBF24]"
           >
             <AlertTriangle size={11} /> Sotto scorta
           </Badge>
@@ -161,7 +161,7 @@ export default function Materiali() {
             <span
               key={m.id}
               data-testid={`low-stock-chip-${m.id}`}
-              className="rounded-full border border-amber-500/30 bg-[#451A03] px-3 py-1 text-xs text-[#FDE68A]"
+              className="rounded-full border border-amber-500/30 bg-[#3D2708] px-3 py-1 text-xs text-[#FBBF24]"
             >
               {m.nome}
             </span>
@@ -193,7 +193,7 @@ export default function Materiali() {
             <SelectTrigger id="mat-categoria-filter" data-testid="material-filter-categoria" className="w-full">
               <SelectValue>{(v: string) => (v === "tutte" ? "Tutte le categorie" : v)}</SelectValue>
             </SelectTrigger>
-            <SelectContent className="border-slate-800 bg-[#0F172A]">
+            <SelectContent className="border-[#1E293B] bg-[#111827]">
               <SelectItem value="tutte" data-testid="material-filter-tutte">
                 Tutte le categorie
               </SelectItem>
@@ -210,15 +210,15 @@ export default function Materiali() {
       {isLoading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-[#0F172A]" />
+            <div key={i} className="h-14 animate-pulse rounded-xl bg-[#111827]" />
           ))}
         </div>
       ) : isError ? (
-        <p className="rounded-lg border border-slate-800 bg-[#0F172A] px-4 py-6 text-sm text-slate-400" data-testid="materiali-error">
+        <p className="rounded-lg border border-[#1E293B] bg-[#111827] px-4 py-6 text-sm text-slate-400" data-testid="materiali-error">
           Dati non disponibili al momento.
         </p>
       ) : filtrati.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 px-4 py-12 text-center" data-testid="materiali-empty">
+        <div className="rounded-2xl border border-dashed border-[#27364F] px-4 py-12 text-center" data-testid="materiali-empty">
           <Package size={28} className="mx-auto text-slate-500" />
           <p className="mt-3 text-sm text-slate-400">
             Nessun materiale trovato. Modifica la ricerca o aggiungine uno nuovo.
@@ -228,7 +228,7 @@ export default function Materiali() {
         <>
           <Table data-testid="materiali-table" className="hidden md:table">
             <TableHeader>
-              <TableRow className="border-slate-800">
+              <TableRow className="border-[#1E293B]">
                 <TableHead className="text-slate-400">Materiale</TableHead>
                 <TableHead className="text-slate-400">Categoria</TableHead>
                 <TableHead className="text-right text-slate-400">Prezzo</TableHead>
@@ -239,7 +239,7 @@ export default function Materiali() {
             </TableHeader>
             <TableBody>
               {filtrati.map((m) => (
-                <TableRow key={m.id} data-testid={`material-row-${m.id}`} className="border-slate-800">
+                <TableRow key={m.id} data-testid={`material-row-${m.id}`} className="border-[#1E293B]">
                   <TableCell>
                     <p className="font-medium text-slate-100">{m.nome}</p>
                     {m.codice_art && <p className="font-mono text-xs text-slate-500">{m.codice_art}</p>}
@@ -264,7 +264,7 @@ export default function Materiali() {
               <div
                 key={m.id}
                 data-testid={`material-card-${m.id}`}
-                className="rounded-xl border border-slate-800 bg-[#0F172A] p-4"
+                className="rounded-xl border border-[#1E293B] bg-[#111827] p-4"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">

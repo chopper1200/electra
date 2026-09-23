@@ -117,7 +117,7 @@ export default function MaterialModal({ open, onOpenChange, materiale }: Materia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="material-modal"
-        className="max-h-[90svh] overflow-y-auto border-slate-800 bg-[#0F172A] sm:max-w-xl"
+        className="max-h-[90svh] overflow-y-auto border-[#1E293B] bg-[#111827] sm:max-w-xl"
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-slate-100">

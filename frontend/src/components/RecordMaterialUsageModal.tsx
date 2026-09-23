@@ -110,7 +110,7 @@ export default function RecordMaterialUsageModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="usage-modal"
-        className="max-h-[90svh] overflow-y-auto border-slate-800 bg-[#0F172A] sm:max-w-lg"
+        className="max-h-[90svh] overflow-y-auto border-[#1E293B] bg-[#111827] sm:max-w-lg"
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-slate-100">
@@ -123,7 +123,7 @@ export default function RecordMaterialUsageModal({
 
         <div className="space-y-2" data-testid="usage-list">
           {(lavoroCorrente.materiali_usati ?? []).length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-700 px-4 py-3 text-sm text-slate-400">
+            <p className="rounded-lg border border-dashed border-[#27364F] px-4 py-3 text-sm text-slate-400">
               Nessun materiale registrato per questo lavoro.
             </p>
           ) : (
@@ -131,7 +131,7 @@ export default function RecordMaterialUsageModal({
               <div
                 key={u.id}
                 data-testid={`usage-row-${u.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-[#1E293B] px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-lg border border-[#1E293B] bg-[#162032] px-3 py-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-100">{u.nome}</p>
@@ -155,7 +155,7 @@ export default function RecordMaterialUsageModal({
           )}
         </div>
 
-        <div className="space-y-3 rounded-lg border border-slate-800 bg-[#1E293B]/60 p-3">
+        <div className="space-y-3 rounded-lg border border-[#1E293B] bg-[#162032]/60 p-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Aggiungi dal catalogo
           </p>

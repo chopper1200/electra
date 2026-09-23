@@ -231,11 +231,46 @@ async def main() -> None:
             giorni=25, stato="rifiutato", voci_mat=voci_domotica_mat, voci_man=voci_domotica_man,
             note="Cliente ha preferito altro fornitore.",
         ),
+        # Inviato 45 giorni fa con validità 30: scaduto, richiede follow-up.
+        crea_preventivo(
+            f"P-{anno}-0006", cliente=CLIENTI["giorgio"], titolo="Quadro elettrico garage e linea dedicata",
+            giorni=45, stato="inviato", voci_mat=voci_wallbox_mat, voci_man=voci_wallbox_man,
+        ),
     ]
     await db.preventivi.insert_many(preventivi)
 
+    clienti_docs = [
+        {
+            "id": str(uuid.uuid4()),
+            "nome": c["nome"],
+            "telefono": c.get("telefono", ""),
+            "email": c.get("email", ""),
+            "indirizzo": c.get("indirizzo", ""),
+            "piva": c.get("piva", ""),
+            "note": "",
+            "created_at": utc_now() - timedelta(days=40),
+        }
+        for c in CLIENTI.values()
+    ]
+    clienti_docs.append(
+        {
+            "id": str(uuid.uuid4()),
+            "nome": "Studio Dentistico Sorriso",
+            "telefono": "345 2200110",
+            "email": "info@studiosorriso.it",
+            "indirizzo": "Via Dante 19, Verona",
+            "piva": "02345678901",
+            "note": "Interventi solo fuori orario di apertura.",
+            "created_at": utc_now() - timedelta(days=20),
+        }
+    )
+    await db.clienti.insert_many(clienti_docs)
+
     await ensure_indexes()
-    print(f"Seed completato: {len(mat_docs)} materiali, {len(lavori_docs)} lavori, {len(preventivi)} preventivi.")
+    print(
+        f"Seed completato: {len(mat_docs)} materiali, {len(lavori_docs)} lavori, "
+        f"{len(preventivi)} preventivi, {len(clienti_docs)} clienti."
+    )
 
 
 if __name__ == "__main__":

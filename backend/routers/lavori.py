@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from lib.dates import today_iso
 from lib.db import db
+from routers.clienti import upsert_cliente
 
 router = APIRouter(prefix="/lavori", tags=["lavori"])
 
@@ -96,6 +97,11 @@ async def lista_lavori(stato: StatoLavoro | None = None):
 async def crea_lavoro(input: LavoroIn):
     lavoro = Lavoro(**input.model_dump())
     await db.lavori.insert_one(lavoro.model_dump())
+    await upsert_cliente(
+        input.cliente_nome,
+        telefono=input.cliente_telefono,
+        indirizzo=input.cliente_indirizzo,
+    )
     return lavoro
 
 
@@ -111,6 +117,11 @@ async def aggiorna_lavoro(lavoro_id: str, input: LavoroIn):
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Lavoro non trovato")
+    await upsert_cliente(
+        input.cliente_nome,
+        telefono=input.cliente_telefono,
+        indirizzo=input.cliente_indirizzo,
+    )
     return Lavoro(**doc)
 
 
