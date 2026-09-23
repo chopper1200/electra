@@ -13,6 +13,15 @@ export interface MaterialUsage {
   prezzo_unitario: number;
 }
 
+export interface OraLavorata {
+  id: string;
+  data: string;
+  ore: number;
+  tariffa_oraria: number;
+  descrizione: string;
+  preventivo_id: string;
+}
+
 export interface Lavoro {
   id: string;
   titolo: string;
@@ -27,6 +36,7 @@ export interface Lavoro {
   ore_manodopera: number;
   note: string;
   materiali_usati: MaterialUsage[];
+  ore_lavorate: OraLavorata[];
   created_at: string;
 }
 
@@ -86,6 +96,8 @@ export interface VoceManodopera {
   ore: number;
   tariffa_oraria: number;
   subtotale: number;
+  lavoro_id?: string;
+  ore_entry_id?: string;
 }
 
 export interface Preventivo {
@@ -132,6 +144,8 @@ export interface PreventivoInput {
     descrizione: string;
     ore: number;
     tariffa_oraria: number;
+    lavoro_id?: string;
+    ore_entry_id?: string;
   }[];
   sconto_percentuale: number;
   aliquota_iva: number;

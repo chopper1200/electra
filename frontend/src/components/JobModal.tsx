@@ -243,7 +243,7 @@ export default function JobModal({ open, onOpenChange, lavoro }: JobModalProps) 
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="job-ore">Ore di manodopera</Label>
+            <Label htmlFor="job-ore">Ore stimate</Label>
             <Input
               id="job-ore"
               data-testid="job-input-ore"

@@ -36,6 +36,8 @@ class VoceManodopera(BaseModel):
     ore: float
     tariffa_oraria: float
     subtotale: float = 0.0
+    lavoro_id: str = ""
+    ore_entry_id: str = ""
 
 
 class Preventivo(BaseModel):
@@ -74,6 +76,8 @@ class VoceManodoperaIn(BaseModel):
     descrizione: str
     ore: float
     tariffa_oraria: float
+    lavoro_id: str = ""
+    ore_entry_id: str = ""
 
 
 class PreventivoIn(BaseModel):
@@ -114,6 +118,8 @@ def _build_doc(input: PreventivoIn, *, numero: str, base: dict | None = None) ->
             ore=round(v.ore, 2),
             tariffa_oraria=v.tariffa_oraria,
             subtotale=round(v.ore * v.tariffa_oraria, 2),
+            lavoro_id=v.lavoro_id,
+            ore_entry_id=v.ore_entry_id,
         )
         for v in input.voci_manodopera
     ]
@@ -151,6 +157,30 @@ def _build_doc(input: PreventivoIn, *, numero: str, base: dict | None = None) ->
     return doc
 
 
+async def _sync_ore_lavorate(preventivo_id: str, voci_man: list[dict]) -> None:
+    """Allinea il contrassegno preventivo_id sulle ore tracciate dei lavori.
+
+    Le ore referenziate dalle voci manodopera del preventivo vengono marcate con
+    il suo id; le ore prima marcate con questo preventivo e assenti dalle voci
+    tornano disponibili per una nuova importazione.
+    """
+    attesi = {v["ore_entry_id"] for v in voci_man if v.get("ore_entry_id")}
+    lavori = await db.lavori.find({"ore_lavorate.0": {"$exists": True}}).to_list(1000)
+    for l in lavori:
+        nuove = []
+        cambiato = False
+        for e in l.get("ore_lavorate", []):
+            if e["id"] in attesi:
+                cambiato = cambiato or e.get("preventivo_id", "") != preventivo_id
+                e["preventivo_id"] = preventivo_id
+            elif e.get("preventivo_id", "") == preventivo_id:
+                cambiato = True
+                e["preventivo_id"] = ""
+            nuove.append(e)
+        if cambiato:
+            await db.lavori.update_one({"id": l["id"]}, {"$set": {"ore_lavorate": nuove}})
+
+
 async def _get_preventivo(preventivo_id: str) -> dict:
     doc = await db.preventivi.find_one({"id": preventivo_id})
     if not doc:
@@ -180,7 +210,9 @@ async def lista_preventivi():
 async def crea_preventivo(input: PreventivoIn):
     numero = await _next_numero()
     preventivo = Preventivo(**_build_doc(input, numero=numero))
-    await db.preventivi.insert_one(preventivo.model_dump())
+    doc = preventivo.model_dump()
+    await db.preventivi.insert_one(doc)
+    await _sync_ore_lavorate(preventivo.id, doc["voci_manodopera"])
     return preventivo
 
 
@@ -198,6 +230,7 @@ async def aggiorna_preventivo(preventivo_id: str, input: PreventivoIn):
         )
     doc = _build_doc(input, numero=base["numero"], base=base)
     await db.preventivi.update_one({"id": preventivo_id}, {"$set": doc})
+    await _sync_ore_lavorate(preventivo_id, doc["voci_manodopera"])
     return Preventivo(**{**base, **doc})
 
 
@@ -222,6 +255,11 @@ async def duplica_preventivo(preventivo_id: str):
     nuovo["stato"] = "bozza"
     nuovo["lavoro_id"] = ""
     nuovo["created_at"] = utc_now()
+    # il duplicato è una bozza nuova: le voci manodopera perdono il legame con le ore tracciate
+    nuovo["voci_manodopera"] = [
+        {k: v for k, v in voce.items() if k not in ("lavoro_id", "ore_entry_id")}
+        for voce in base.get("voci_manodopera", [])
+    ]
     await db.preventivi.insert_one(nuovo)
     return Preventivo(**nuovo)
 
@@ -267,6 +305,8 @@ async def converti_in_lavoro(preventivo_id: str):
 
 @router.delete("/{preventivo_id}", status_code=204)
 async def elimina_preventivo(preventivo_id: str):
+    await _get_preventivo(preventivo_id)
+    await _sync_ore_lavorate(preventivo_id, [])
     res = await db.preventivi.delete_one({"id": preventivo_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Preventivo non trovato")

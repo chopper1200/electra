@@ -7,6 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from lib.dates import today_iso
 from lib.db import db
 
 router = APIRouter(prefix="/lavori", tags=["lavori"])
@@ -27,6 +28,15 @@ class MaterialUsage(BaseModel):
     prezzo_unitario: float = 0.0
 
 
+class OraLavorata(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    data: str = ""
+    ore: float
+    tariffa_oraria: float = 0.0
+    descrizione: str = ""
+    preventivo_id: str = ""
+
+
 class Lavoro(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     titolo: str
@@ -41,6 +51,7 @@ class Lavoro(BaseModel):
     ore_manodopera: float = 0.0
     note: str = ""
     materiali_usati: list[MaterialUsage] = Field(default_factory=list)
+    ore_lavorate: list[OraLavorata] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -153,6 +164,47 @@ async def elimina_materiale_usato(lavoro_id: str, usage_id: str):
     )
     await db.materiali.update_one(
         {"id": usage["materiale_id"]}, {"$inc": {"quantita_disponibile": usage["quantita"]}}
+    )
+    return Lavoro(**updated)
+
+
+class OraIn(BaseModel):
+    data: str = ""
+    ore: float
+    tariffa_oraria: float = 0.0
+    descrizione: str = ""
+
+
+@router.post("/{lavoro_id}/ore", response_model=Lavoro)
+async def registra_ore(lavoro_id: str, input: OraIn):
+    await _get_lavoro(lavoro_id)
+    ore = round(input.ore, 2)
+    if ore <= 0:
+        raise HTTPException(status_code=422, detail="Le ore devono essere maggiori di zero")
+    entry = OraLavorata(
+        data=input.data or today_iso(),
+        ore=ore,
+        tariffa_oraria=input.tariffa_oraria,
+        descrizione=input.descrizione,
+    )
+    doc = await db.lavori.find_one_and_update(
+        {"id": lavoro_id}, {"$push": {"ore_lavorate": entry.model_dump()}}, return_document=True
+    )
+    return Lavoro(**doc)
+
+
+@router.delete("/{lavoro_id}/ore/{entry_id}", response_model=Lavoro)
+async def elimina_ore(lavoro_id: str, entry_id: str):
+    doc = await _get_lavoro(lavoro_id)
+    entry = next((e for e in doc.get("ore_lavorate", []) if e.get("id") == entry_id), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Voce ore non trovata")
+    if entry.get("preventivo_id"):
+        raise HTTPException(
+            status_code=400, detail="Ora già inclusa in un preventivo: rimuovila prima da lì"
+        )
+    updated = await db.lavori.find_one_and_update(
+        {"id": lavoro_id}, {"$pull": {"ore_lavorate": {"id": entry_id}}}, return_document=True
     )
     return Lavoro(**updated)
 

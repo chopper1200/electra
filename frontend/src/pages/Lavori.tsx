@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ClipboardList,
+  Clock,
   MessageCircle,
   MoreVertical,
   Pencil,
@@ -15,6 +16,7 @@ import { apiDelete, apiGet, apiPatch } from "@/lib/api";
 import type { Lavoro, StatoLavoro } from "@/lib/types";
 import { fmtDate, fmtEuro, STATO_LAVORO_LABELS, waLink } from "@/lib/format";
 import JobModal from "@/components/JobModal";
+import OreModal from "@/components/OreModal";
 import RecordMaterialUsageModal from "@/components/RecordMaterialUsageModal";
 import StatusBadge from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +51,7 @@ export default function Lavori() {
   const [jobModalOpen, setJobModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Lavoro | null>(null);
   const [usageTarget, setUsageTarget] = useState<Lavoro | null>(null);
+  const [oreTarget, setOreTarget] = useState<Lavoro | null>(null);
 
   const { data: lavori, isLoading, isError } = useQuery({
     queryKey: ["lavori"],
@@ -122,6 +125,12 @@ export default function Lavori() {
           onClick={() => setUsageTarget(l)}
         >
           <ClipboardList size={15} /> Registra materiali
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          data-testid={`job-ore-${l.id}`}
+          onClick={() => setOreTarget(l)}
+        >
+          <Clock size={15} /> Registro ore
         </DropdownMenuItem>
         <DropdownMenuItem
           data-testid={`job-edit-${l.id}`}
@@ -303,6 +312,14 @@ export default function Lavori() {
                   >
                     <ClipboardList size={15} /> Materiali
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    data-testid={`job-ore-mobile-${l.id}`}
+                    onClick={() => setOreTarget(l)}
+                  >
+                    <Clock size={15} /> Ore
+                  </Button>
                   {azioniMenu(l)}
                 </div>
               </div>
@@ -322,6 +339,13 @@ export default function Lavori() {
           if (!o) setUsageTarget(null);
         }}
         lavoro={usageTarget}
+      />
+      <OreModal
+        open={oreTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setOreTarget(null);
+        }}
+        lavoro={oreTarget}
       />
     </div>
   );

@@ -113,6 +113,18 @@ LAVORI = [
     {"titolo": "Aggiornamento impianto bagno ristrutturato", "cliente_nome": "Paolo Neri", "cliente_telefono": "348 2223344", "cliente_indirizzo": "Via Toscanini 7, Verona", "descrizione": "Nuove prese con differenziale dedicato, punto luce specchio, ventola.", "stato": "in_corso", "data_inizio": giorni_fa(4), "data_fine_prevista": giorni_fa(-3), "prezzo_pattuito": 900.0, "ore_manodopera": 6, "note": ""},
 ]
 
+ORE_SEED = {
+    "Rifacimento impianto elettrico appartamento": [
+        {"data": giorni_fa(10), "ore": 6, "tariffa_oraria": 35.0, "descrizione": "Demolizione e posa canaline"},
+        {"data": giorni_fa(7), "ore": 8, "tariffa_oraria": 35.0, "descrizione": "Cablaggio quadro e prese"},
+        {"data": giorni_fa(2), "ore": 4, "tariffa_oraria": 35.0, "descrizione": "Verifiche e collaudo"},
+    ],
+    "Aggiornamento impianto bagno ristrutturato": [
+        {"data": giorni_fa(3), "ore": 5, "tariffa_oraria": 35.0, "descrizione": "Posa scatole e tubazioni"},
+        {"data": giorni_fa(1), "ore": 3, "tariffa_oraria": 35.0, "descrizione": "Montaggio punti luce"},
+    ],
+}
+
 CLIENTI = {
     "marco": {"nome": "Marco Bianchi", "telefono": "333 1234567", "email": "marco.bianchi@email.it", "indirizzo": "Via Roma 12, Verona", "piva": ""},
     "laura": {"nome": "Laura Ferri", "telefono": "335 9876543", "email": "laura.ferri@email.it", "indirizzo": "Via Verdi 8, Verona", "piva": ""},
@@ -141,6 +153,10 @@ async def main() -> None:
             "id": str(uuid.uuid4()),
             **l,
             "materiali_usati": [],
+            "ore_lavorate": [
+                {"id": str(uuid.uuid4()), **o, "preventivo_id": ""}
+                for o in ORE_SEED.get(l["titolo"], [])
+            ],
             "created_at": utc_now() - timedelta(days=40 - i * 5),
         }
         lavori_docs.append(doc)

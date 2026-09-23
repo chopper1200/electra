@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Plus, Trash2 } from "lucide-react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
-import type { Materiale, Preventivo, PreventivoInput } from "@/lib/types";
-import { fmtEuro, parseNum } from "@/lib/format";
+import type { Lavoro, Materiale, Preventivo, PreventivoInput } from "@/lib/types";
+import { fmtDate, fmtEuro, parseNum } from "@/lib/format";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,8 @@ interface ManRow {
   descrizione: string;
   ore: string;
   tariffa_oraria: string;
+  lavoro_id: string;
+  ore_entry_id: string;
 }
 
 interface FormState {
@@ -62,7 +64,7 @@ const emptyForm = (): FormState => ({
   data_emissione: new Date().toISOString().slice(0, 10),
   validita_giorni: "30",
   matRows: [],
-  manRows: [{ descrizione: "", ore: "", tariffa_oraria: "35" }],
+  manRows: [{ descrizione: "", ore: "", tariffa_oraria: "35", lavoro_id: "", ore_entry_id: "" }],
   sconto: "",
   aliquota: "22",
   note_condizioni: NOTE_DEFAULT,
@@ -75,10 +77,16 @@ export default function PreventivoEditor() {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
   const [initialized, setInitialized] = useState(false);
+  const [lavoroImport, setLavoroImport] = useState("");
 
   const { data: materiali } = useQuery({
     queryKey: ["materiali"],
     queryFn: () => apiGet<Materiale[]>("/materiali"),
+  });
+
+  const { data: lavori } = useQuery({
+    queryKey: ["lavori"],
+    queryFn: () => apiGet<Lavoro[]>("/lavori"),
   });
 
   const { data: quote, isLoading: quoteLoading } = useQuery({
@@ -109,6 +117,8 @@ export default function PreventivoEditor() {
         descrizione: v.descrizione,
         ore: String(v.ore),
         tariffa_oraria: String(v.tariffa_oraria),
+        lavoro_id: v.lavoro_id ?? "",
+        ore_entry_id: v.ore_entry_id ?? "",
       })),
       sconto: quote.sconto_percentuale ? String(quote.sconto_percentuale) : "",
       aliquota: String(quote.aliquota_iva),
@@ -141,6 +151,7 @@ export default function PreventivoEditor() {
         qc.invalidateQueries({ queryKey: ["preventivi"] }),
         qc.invalidateQueries({ queryKey: ["dashboard"] }),
         qc.invalidateQueries({ queryKey: ["preventivo", saved.id] }),
+        qc.invalidateQueries({ queryKey: ["lavori"] }),
       ]);
       toast.success(isEdit ? "Preventivo aggiornato" : "Preventivo creato");
       navigate(`/preventivi/${saved.id}`);
@@ -174,11 +185,41 @@ export default function PreventivoEditor() {
   const addMan = () =>
     setForm((f) => ({
       ...f,
-      manRows: [...f.manRows, { descrizione: "", ore: "", tariffa_oraria: "35" }],
+      manRows: [
+        ...f.manRows,
+        { descrizione: "", ore: "", tariffa_oraria: "35", lavoro_id: "", ore_entry_id: "" },
+      ],
     }));
 
   const removeMan = (idx: number) =>
     setForm((f) => ({ ...f, manRows: f.manRows.filter((_, i) => i !== idx) }));
+
+  const importaOre = () => {
+    const lavoro = lavori?.find((l) => l.id === lavoroImport);
+    if (!lavoro) return;
+    const quoteId = isEdit ? (id ?? "") : "";
+    const voci = (lavoro.ore_lavorate ?? []).filter(
+      (e) => !e.preventivo_id || e.preventivo_id === quoteId,
+    );
+    if (voci.length === 0) {
+      toast.info(
+        "Nessuna ora da importare: tutte le ore di questo lavoro sono già in un altro preventivo",
+      );
+      return;
+    }
+    const nuoveRighe: ManRow[] = voci.map((e) => ({
+      descrizione: `${e.descrizione || "Manodopera"}${e.data ? ` — ${fmtDate(e.data)}` : ""}`,
+      ore: String(e.ore),
+      tariffa_oraria: String(e.tariffa_oraria),
+      lavoro_id: lavoro.id,
+      ore_entry_id: e.id,
+    }));
+    setForm((f) => ({
+      ...f,
+      manRows: [...f.manRows.filter((r) => r.lavoro_id !== lavoro.id), ...nuoveRighe],
+    }));
+    toast.success(`Importate ${voci.length} voci di manodopera dal cantiere`);
+  };
 
   const onMaterialPick = (idx: number, materialeId: string) => {
     const m = materiali?.find((x) => x.id === materialeId);
@@ -226,6 +267,8 @@ export default function PreventivoEditor() {
           descrizione: r.descrizione.trim(),
           ore: parseNum(r.ore),
           tariffa_oraria: parseNum(r.tariffa_oraria),
+          lavoro_id: r.lavoro_id,
+          ore_entry_id: r.ore_entry_id,
         })),
       sconto_percentuale: parseNum(form.sconto),
       aliquota_iva: parseNum(form.aliquota) || 22,
@@ -498,6 +541,49 @@ export default function PreventivoEditor() {
                 <Button variant="outline" data-testid="btn-add-labor-row" onClick={addMan}>
                   <Plus size={15} /> Aggiungi manodopera
                 </Button>
+                <div className="rounded-lg border border-slate-800 bg-[#1E293B]/60 p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="flex-1 space-y-1.5">
+                      <Label htmlFor="q-import-lavoro">Importa ore da cantiere</Label>
+                      <Select value={lavoroImport} onValueChange={setLavoroImport}>
+                        <SelectTrigger
+                          id="q-import-lavoro"
+                          data-testid="quote-import-lavoro-select"
+                          className="w-full"
+                        >
+                          <SelectValue>
+                            {(v: string) =>
+                              lavori?.find((l) => l.id === v)?.titolo ?? "Seleziona un lavoro…"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="border-slate-800 bg-[#0F172A]">
+                          {(lavori ?? []).map((l) => (
+                            <SelectItem
+                              key={l.id}
+                              value={l.id}
+                              data-testid={`quote-import-option-${l.id}`}
+                            >
+                              {l.titolo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="outline"
+                      data-testid="btn-import-ore"
+                      onClick={importaOre}
+                      disabled={!lavoroImport}
+                    >
+                      <Clock size={15} /> Importa ore
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Vengono importate solo le ore registrate in cantiere e non ancora incluse in
+                    altri preventivi.
+                  </p>
+                </div>
               </div>
             </Card>
 

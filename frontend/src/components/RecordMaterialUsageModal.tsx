@@ -44,6 +44,13 @@ export default function RecordMaterialUsageModal({
     enabled: open,
   });
 
+  // Dati sempre freschi dal cache: dopo una registrazione la lista si aggiorna da sola.
+  const { data: lavoriFresh } = useQuery({
+    queryKey: ["lavori"],
+    queryFn: () => apiGet<Lavoro[]>("/lavori"),
+    enabled: open,
+  });
+
   useEffect(() => {
     if (!open) return;
     setMaterialeId("");
@@ -96,6 +103,7 @@ export default function RecordMaterialUsageModal({
 
   if (!lavoro) return null;
 
+  const lavoroCorrente = lavoriFresh?.find((l) => l.id === lavoro.id) ?? lavoro;
   const selezionato = materiali?.find((m) => m.id === materialeId);
 
   return (
@@ -106,7 +114,7 @@ export default function RecordMaterialUsageModal({
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-slate-100">
-            Materiali usati — {lavoro.titolo}
+            Materiali usati — {lavoroCorrente.titolo}
           </DialogTitle>
           <DialogDescription className="text-slate-400">
             Registra ciò che hai consumato in cantiere: la giacenza di magazzino si aggiorna da sola.
@@ -114,12 +122,12 @@ export default function RecordMaterialUsageModal({
         </DialogHeader>
 
         <div className="space-y-2" data-testid="usage-list">
-          {(lavoro.materiali_usati ?? []).length === 0 ? (
+          {(lavoroCorrente.materiali_usati ?? []).length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-700 px-4 py-3 text-sm text-slate-400">
               Nessun materiale registrato per questo lavoro.
             </p>
           ) : (
-            lavoro.materiali_usati.map((u) => (
+            lavoroCorrente.materiali_usati.map((u) => (
               <div
                 key={u.id}
                 data-testid={`usage-row-${u.id}`}
