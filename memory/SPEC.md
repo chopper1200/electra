@@ -20,6 +20,7 @@ App in italiano per la gestione del lavoro di un elettricista: **Lavori, Materia
 - `GET/POST /api/materiali`, `PUT/DELETE /api/materiali/{id}`, `PATCH /api/materiali/{id}/stock` {delta: ±}
 - `GET/POST /api/preventivi`, `GET/PUT/DELETE /api/preventivi/{id}`, `PATCH /api/preventivi/{id}/stato`
 - `PATCH /api/preventivi/{id}/rinnova` {validita_giorni} — follow-up: ri-emette da oggi con nuova validità e stato `inviato`
+- `POST /api/preventivi/{id}/invia` — invia il preventivo per email al cliente e segna lo stato `inviato`, salvando `email_inviata_a` e `data_invio_email`. Il destinatario è letto dal documento salvato (`cliente_email`) e il corpo HTML deriva da un template server-side in `routers/preventivi.py` (`_corpo_email`): il client passa solo l'id, mai indirizzi o markup. 400 se il cliente non ha email.
 - `GET/POST /api/clienti`, `PUT/DELETE /api/clienti/{id}` — anagrafica (409 se il nome esiste già)
 - `POST /api/preventivi/{id}/duplica` (nuova bozza con nuovo numero), `POST /api/preventivi/{id}/converti` (solo stato=accettato, una volta sola: crea Lavoro con cliente/materiali/totale)
 - Importazione ore: nel builder preventivo si sceglie il lavoro e si importano le sue ore non ancora preventivate (ore con `preventivo_id` vuoto o pari al preventivo corrente); al salvataggio il server marca le ore (`_sync_ore_lavorate`, richiamata anche su modifica/eliminazione del preventivo per riallineare i contrassegni). Un'ora marcata non si può cancellare dal registro.
@@ -34,11 +35,14 @@ App in italiano per la gestione del lavoro di un elettricista: **Lavori, Materia
 - **Materiale**: codice_art, nome, categoria(6 categorie italiane), unita_misura(pz|m|conf|rotolo), prezzo_unitario, prezzo_costo, quantita_disponibile, scorta_minima, fornitore
 - **Preventivo**: numero progressivo server-side "P-<anno>-NNNN", data_emissione, validita_giorni, dati cliente, titolo_intervento, voci_materiali, voci_manodopera{descrizione,ore,tariffa_oraria,lavoro_id?,ore_entry_id? — righe importabili dal registro ore di un cantiere}, sconto_percentuale, aliquota_iva(22|10), totale_imponibile/totale_iva/totale_preventivo **calcolati server-side**, stato(bozza|inviato|accettato|rifiutato), note_condizioni, lavoro_id
 
-## Seed
-`cd /app/backend && python seed.py` — idempotente (salta se `materiali` non è vuota). Crea 18 materiali reali (BTicino Living Now, FS18, differenziale Gewiss…), 6 lavori, 6 preventivi P-<anno>-0001…0006 in stati diversi (2 inviati, 1 bozza, 1 accettato, 1 rifiutato, **1 inviato 45 giorni fa → scaduto** per il promemoria follow-up), 6 clienti in anagrafica, 4 materiali sotto scorta, ore lavorate di esempio su 2 cantieri (registro ore, importabili nei preventivi).
+## Dati
+L'app parte **vuota**: nessun dato di esempio, nessuno script di seed (rimosso su richiesta dell'utente, che inserisce i propri dati reali). Le collezioni Mongo (`lavori`, `materiali`, `preventivi`, `clienti`) vengono create al primo inserimento; gli indici sono garantiti da `ensure_indexes()` allo startup di server.py. Ogni pagina ha il proprio empty state in italiano che spiega come iniziare.
 
 ## Tema (design_guidelines.json, archetipo «The Performance Pro»)
 Dark obsidian/navy: pagina `#0B0F17`, pannelli `#111827`, superfici elevate `#162032`, bordi `#1E293B`/`#27364F`, accento ambra `#F59E0B`, info `#38BDF8`, urgenza `#2A1418`/`#F87171`. Font: Outfit (heading), Plus Jakarta Sans (body), JetBrains Mono (numeri/importi) — tutti via `@fontsource-variable` in index.css. Micro-interazioni: hover con lift `-translate-y-0.5` sulle card, transizioni mirate 150-200ms, keyframes `fade-in-up` e `pulse-attention`.
+
+## Integrazioni
+**Email (Resend gestito da Emergent)** — `backend/lib/email.py`: `send_email()` POSTa su `https://integrations.emergentagent.com/api/v1/email/send` con header `X-Email-Key`. Env in backend/.env: `EMERGENT_EMAIL_KEY` e `EMAIL_FROM_NAME=VoltCraft Elettrica` (nome mittente visibile; l'indirizzo From è gestito dalla piattaforma). `_assert_safe_email()` è un gate obbligatorio chiamato su ogni invio (blocca form/input, link non-https, richieste di credenziali) — non va indebolito né avvolto in try/except. Nessuna chiave dell'utente richiesta. Opzionale: `EMAIL_REPLY_TO` per far arrivare le risposte a una casella dell'elettricista (non ancora impostata).
 
 ## Note
 - Credenziali: nessuna — l'app è senza login (vedi memory/test_credentials.md).

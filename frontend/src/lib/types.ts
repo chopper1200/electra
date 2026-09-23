@@ -144,6 +144,8 @@ export interface Preventivo {
   data_scadenza: string;
   giorni_alla_scadenza: number;
   scaduto: boolean;
+  email_inviata_a: string;
+  data_invio_email: string;
   created_at: string;
 }
 

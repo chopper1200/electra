@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
+from html import escape
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from lib.dates import aggiungi_giorni, giorni_tra, today_iso
 from lib.db import db
+from lib.email import EMAIL_FROM_NAME, send_email
 from routers.clienti import upsert_cliente
 from routers.lavori import Lavoro, MaterialUsage
 
@@ -65,6 +67,8 @@ class Preventivo(BaseModel):
     data_scadenza: str = ""
     giorni_alla_scadenza: int = 0
     scaduto: bool = False
+    email_inviata_a: str = ""
+    data_invio_email: str = ""
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -365,3 +369,138 @@ async def elimina_preventivo(preventivo_id: str):
     res = await db.preventivi.delete_one({"id": preventivo_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Preventivo non trovato")
+
+
+def _euro(valore: float) -> str:
+    """Formatta un importo in stile italiano: 1.234,56 €."""
+    intero, _, dec = f"{valore:,.2f}".partition(".")
+    return f"{intero.replace(',', '.')},{dec} €"
+
+
+def _data_it(iso: str) -> str:
+    parti = str(iso or "")[:10].split("-")
+    return f"{parti[2]}/{parti[1]}/{parti[0]}" if len(parti) == 3 else "—"
+
+
+def _righe_html(doc: dict) -> str:
+    """Tabella delle voci: costruita lato server, tutti i valori escapati (G4)."""
+    righe = []
+    for v in doc.get("voci_materiali", []):
+        quantita = escape(f"{v['quantita']:g} {v.get('unita', 'pz')}")
+        righe.append(
+            "<tr>"
+            f'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0">'
+            f'{escape(str(v["nome"]))}</td>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right">'
+            f"{quantita}</td>"
+            f'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right">'
+            f'{escape(_euro(v["subtotale"]))}</td>'
+            "</tr>"
+        )
+    for v in doc.get("voci_manodopera", []):
+        ore = escape(f"{v['ore']:g} h")
+        righe.append(
+            "<tr>"
+            f'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0">'
+            f'{escape(str(v["descrizione"]))}</td>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right">'
+            f"{ore}</td>"
+            f'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right">'
+            f'{escape(_euro(v["subtotale"]))}</td>'
+            "</tr>"
+        )
+    return "".join(righe)
+
+
+def _corpo_email(doc: dict) -> str:
+    """Template server-side del preventivo: nessun HTML arriva dal client."""
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background:#f1f5f9;padding:24px 0"><tr><td align="center">'
+        '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
+        'style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;'
+        'font-family:Arial,Helvetica,sans-serif;color:#0f172a">'
+        '<tr><td style="background:#0b0f17;padding:20px 24px">'
+        f'<div style="font-size:18px;font-weight:bold;color:#f59e0b">{escape(EMAIL_FROM_NAME)}</div>'
+        '<div style="font-size:12px;color:#94a3b8;margin-top:2px">'
+        "Impianti elettrici · Manutenzione · Certificazioni</div>"
+        "</td></tr>"
+        '<tr><td style="padding:24px">'
+        f'<p style="margin:0 0 12px">Gentile {escape(str(doc["cliente_nome"]))},</p>'
+        '<p style="margin:0 0 16px">in allegato al presente messaggio trova il riepilogo del '
+        "preventivo richiesto. Resto a disposizione per qualsiasi chiarimento.</p>"
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background:#f8fafc;border-radius:8px;margin:0 0 16px">'
+        f'<tr><td style="padding:12px 14px;font-size:14px">'
+        f'<strong>Preventivo {escape(str(doc["numero"]))}</strong><br>'
+        f'{escape(str(doc["titolo_intervento"]))}<br>'
+        f'<span style="color:#64748b">Emissione {escape(_data_it(doc.get("data_emissione", "")))} · '
+        f'Validità {escape(str(doc.get("validita_giorni", 30)))} giorni</span>'
+        "</td></tr></table>"
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="font-size:14px;border-collapse:collapse">'
+        '<tr style="background:#f1f5f9">'
+        '<th align="left" style="padding:8px 10px">Voce</th>'
+        '<th align="right" style="padding:8px 10px">Q.tà</th>'
+        '<th align="right" style="padding:8px 10px">Importo</th></tr>'
+        f"{_righe_html(doc)}"
+        "</table>"
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="font-size:14px;margin-top:16px">'
+        f'<tr><td align="right" style="padding:3px 10px;color:#64748b">Imponibile</td>'
+        f'<td align="right" style="padding:3px 10px;width:120px">'
+        f'{escape(_euro(doc.get("totale_imponibile", 0)))}</td></tr>'
+        f'<tr><td align="right" style="padding:3px 10px;color:#64748b">'
+        f'IVA {escape(str(doc.get("aliquota_iva", 22)))}%</td>'
+        f'<td align="right" style="padding:3px 10px">{escape(_euro(doc.get("totale_iva", 0)))}</td></tr>'
+        f'<tr><td align="right" style="padding:8px 10px;font-weight:bold;border-top:2px solid #b45309">'
+        f'Totale</td><td align="right" style="padding:8px 10px;font-weight:bold;'
+        f'border-top:2px solid #b45309;color:#b45309">'
+        f'{escape(_euro(doc.get("totale_preventivo", 0)))}</td></tr>'
+        "</table>"
+        + (
+            f'<p style="margin:18px 0 0;font-size:13px;color:#475569">'
+            f'{escape(str(doc.get("note_condizioni", "")))}</p>'
+            if doc.get("note_condizioni")
+            else ""
+        )
+        + "</td></tr>"
+        '<tr><td style="padding:16px 24px;background:#f8fafc;font-size:12px;color:#64748b">'
+        f"Messaggio inviato da {escape(EMAIL_FROM_NAME)}. Per rispondere o modificare il "
+        "preventivo può contattarci ai riferimenti che le abbiamo fornito."
+        "</td></tr></table></td></tr></table>"
+    )
+
+
+@router.post("/{preventivo_id}/invia", response_model=Preventivo)
+async def invia_per_email(preventivo_id: str):
+    """Invia il preventivo al cliente.
+
+    Il destinatario è letto dal documento salvato e il corpo deriva da un template
+    server-side: il chiamante passa solo l'id, mai indirizzi o HTML.
+    """
+    doc = await _get_preventivo(preventivo_id)
+    destinatario = str(doc.get("cliente_email") or "").strip()
+    if not destinatario or "@" not in destinatario:
+        raise HTTPException(
+            status_code=400,
+            detail="Il cliente non ha un indirizzo email: aggiungilo al preventivo e riprova",
+        )
+    await send_email(
+        to=destinatario,
+        subject=f"Preventivo {doc['numero']} — {doc['titolo_intervento']}",
+        html=_corpo_email(doc),
+    )
+    aggiornato = await db.preventivi.find_one_and_update(
+        {"id": preventivo_id},
+        {
+            "$set": {
+                "stato": "inviato",
+                "email_inviata_a": destinatario,
+                "data_invio_email": today_iso(),
+                "data_emissione": doc.get("data_emissione") or today_iso(),
+            }
+        },
+        return_document=True,
+    )
+    return Preventivo(**con_scadenza(aggiornato))

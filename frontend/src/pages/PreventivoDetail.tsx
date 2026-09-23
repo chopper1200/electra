@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   CheckCircle2,
+  Mail,
   Pencil,
   Printer,
   Send,
@@ -11,7 +12,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { ApiError, apiGet, apiPatch, apiPost } from "@/lib/api";
 import type { Lavoro, Preventivo } from "@/lib/types";
 import { fmtDate, fmtEuro, fmtNum } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
@@ -40,8 +41,26 @@ export default function PreventivoDetail() {
     onError: () => toast.error("Errore nell'aggiornamento dello stato"),
   });
 
-  const converti = useMutation({
-    mutationFn: () => apiPost<Lavoro>(`/preventivi/${id}/converti`),
+  const invia = useMutation({
+    mutationFn: () => apiPost<Preventivo>(`/preventivi/${id}/invia`),
+    onSuccess: async (saved) => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["preventivo", id] }),
+        qc.invalidateQueries({ queryKey: ["preventivi"] }),
+        qc.invalidateQueries({ queryKey: ["dashboard"] }),
+      ]);
+      toast.success(`Preventivo inviato a ${saved.email_inviata_a}`);
+    },
+    onError: (e) => {
+      if (e instanceof ApiError && e.status === 400) {
+        toast.error("Il cliente non ha un'email: aggiungila al preventivo e riprova");
+      } else {
+        toast.error("Invio email non riuscito, riprova tra poco");
+      }
+    },
+  });
+
+  const converti = useMutation({    mutationFn: () => apiPost<Lavoro>(`/preventivi/${id}/converti`),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["preventivo", id] }),
@@ -67,6 +86,21 @@ export default function PreventivoDetail() {
         <div className="flex-1" />
         {p && (
           <>
+            <Button
+              size="sm"
+              data-testid="btn-email-quote"
+              onClick={() => invia.mutate()}
+              disabled={invia.isPending || !p.cliente_email}
+              title={
+                p.cliente_email
+                  ? `Invia a ${p.cliente_email}`
+                  : "Aggiungi l'email del cliente per poter inviare"
+              }
+              className="bg-amber-500 text-black hover:bg-amber-600"
+            >
+              <Mail size={15} />
+              {invia.isPending ? "Invio…" : "Invia per email"}
+            </Button>
             {p.stato === "bozza" && (
               <>
                 <Link
@@ -78,11 +112,11 @@ export default function PreventivoDetail() {
                 </Link>
                 <Button
                   size="sm"
+                  variant="outline"
                   data-testid="btn-send-quote"
                   onClick={() => cambiaStato.mutate("inviato")}
-                  className="bg-sky-500 text-black hover:bg-sky-600"
                 >
-                  <Send size={15} /> Invia
+                  <Send size={15} /> Segna inviato
                 </Button>
               </>
             )}
@@ -199,6 +233,11 @@ export default function PreventivoDetail() {
                   data-testid="quote-converted-chip"
                 >
                   Convertito in lavoro
+                </p>
+              )}
+              {p.email_inviata_a && (
+                <p className="mt-2 text-xs text-slate-500" data-testid="quote-email-sent">
+                  Inviato via email a {p.email_inviata_a} il {fmtDate(p.data_invio_email)}
                 </p>
               )}
             </div>
