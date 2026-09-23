@@ -1,20 +1,27 @@
 """Router /api/preventivi — preventivi con voci materiale, manodopera, IVA e sconto."""
 
+import os
+import re
 import uuid
 from datetime import datetime, timezone
 from html import escape
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from lib.dates import aggiungi_giorni, giorni_tra, today_iso
 from lib.db import db
 from lib.email import EMAIL_FROM_NAME, send_email
+from lib.pdf import preventivo_pdf
 from routers.clienti import upsert_cliente
 from routers.lavori import Lavoro, MaterialUsage
 
 router = APIRouter(prefix="/preventivi", tags=["preventivi"])
+
+# Base pubblica dell'app: serve per il link https al PDF dentro l'email (G3).
+APP_URL = os.environ.get("APP_URL", "").rstrip("/")
 
 StatoPreventivo = Literal["bozza", "inviato", "accettato", "rifiutato"]
 
@@ -69,6 +76,7 @@ class Preventivo(BaseModel):
     scaduto: bool = False
     email_inviata_a: str = ""
     data_invio_email: str = ""
+    pdf_token: str = Field(default_factory=lambda: uuid.uuid4().hex)
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -412,8 +420,19 @@ def _righe_html(doc: dict) -> str:
     return "".join(righe)
 
 
-def _corpo_email(doc: dict) -> str:
+def _corpo_email(doc: dict, *, link_pdf: str = "") -> str:
     """Template server-side del preventivo: nessun HTML arriva dal client."""
+    blocco_pdf = (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="margin:0 0 18px"><tr><td align="center" '
+        'style="background:#f59e0b;border-radius:8px">'
+        f'<a href="{escape(link_pdf)}" '
+        'style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:bold;'
+        'color:#0b0f17;text-decoration:none">Scarica il preventivo in PDF</a>'
+        "</td></tr></table>"
+        if link_pdf
+        else ""
+    )
     return (
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         'style="background:#f1f5f9;padding:24px 0"><tr><td align="center">'
@@ -427,8 +446,10 @@ def _corpo_email(doc: dict) -> str:
         "</td></tr>"
         '<tr><td style="padding:24px">'
         f'<p style="margin:0 0 12px">Gentile {escape(str(doc["cliente_nome"]))},</p>'
-        '<p style="margin:0 0 16px">in allegato al presente messaggio trova il riepilogo del '
-        "preventivo richiesto. Resto a disposizione per qualsiasi chiarimento.</p>"
+        '<p style="margin:0 0 16px">di seguito il riepilogo del preventivo richiesto; '
+        "il documento completo è scaricabile in PDF dal pulsante qui sotto. "
+        "Resto a disposizione per qualsiasi chiarimento.</p>"
+        f"{blocco_pdf}"
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         'style="background:#f8fafc;border-radius:8px;margin:0 0 16px">'
         f'<tr><td style="padding:12px 14px;font-size:14px">'
@@ -472,9 +493,38 @@ def _corpo_email(doc: dict) -> str:
     )
 
 
+async def _assicura_token(doc: dict) -> str:
+    """Token di download del PDF: generato una volta e salvato sul preventivo."""
+    token = str(doc.get("pdf_token") or "")
+    if not token:
+        token = uuid.uuid4().hex
+        await db.preventivi.update_one({"id": doc["id"]}, {"$set": {"pdf_token": token}})
+    return token
+
+
+@router.get("/{preventivo_id}/pdf")
+async def scarica_pdf(preventivo_id: str, t: str = Query("", description="Token di download")):
+    """Scarica il PDF del preventivo.
+
+    Se arriva un token va confrontato con quello salvato (è il link usato nelle
+    email verso i clienti); senza token risponde comunque, perché l'app è a uso
+    personale e non ha autenticazione.
+    """
+    doc = await _get_preventivo(preventivo_id)
+    if t and t != str(doc.get("pdf_token") or ""):
+        raise HTTPException(status_code=403, detail="Link di download non valido")
+    pdf = preventivo_pdf(con_scadenza(doc), azienda=EMAIL_FROM_NAME)
+    nome = f"Preventivo-{doc.get('numero', preventivo_id)}.pdf".replace(" ", "-")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{nome}"'},
+    )
+
+
 @router.post("/{preventivo_id}/invia", response_model=Preventivo)
 async def invia_per_email(preventivo_id: str):
-    """Invia il preventivo al cliente.
+    """Invia il preventivo al cliente con il link per scaricare il PDF.
 
     Il destinatario è letto dal documento salvato e il corpo deriva da un template
     server-side: il chiamante passa solo l'id, mai indirizzi o HTML.
@@ -486,10 +536,14 @@ async def invia_per_email(preventivo_id: str):
             status_code=400,
             detail="Il cliente non ha un indirizzo email: aggiungilo al preventivo e riprova",
         )
+    token = await _assicura_token(doc)
+    link_pdf = (
+        f"{APP_URL}/api/preventivi/{preventivo_id}/pdf?t={token}" if APP_URL else ""
+    )
     await send_email(
         to=destinatario,
         subject=f"Preventivo {doc['numero']} — {doc['titolo_intervento']}",
-        html=_corpo_email(doc),
+        html=_corpo_email(doc, link_pdf=link_pdf),
     )
     aggiornato = await db.preventivi.find_one_and_update(
         {"id": preventivo_id},

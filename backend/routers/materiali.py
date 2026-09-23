@@ -1,8 +1,10 @@
 """Router /api/materiali — catalogo e magazzino."""
 
+import os
 import re
 import uuid
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
@@ -106,6 +108,130 @@ async def elimina_materiale(materiale_id: str):
     res = await db.materiali.delete_one({"id": materiale_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Materiale non trovato")
+
+
+class RicaricoIn(BaseModel):
+    categoria: str = "tutte"
+    percentuale: float
+    applica_a: Literal["vendita", "costo", "entrambi"] = "vendita"
+    arrotonda: bool = True
+
+
+class RisultatoRicarico(BaseModel):
+    aggiornati: int
+    categoria: str
+    percentuale: float
+    applica_a: str
+    esempi: list[Materiale] = Field(default_factory=list)
+
+
+class CaricoRiga(BaseModel):
+    materiale_id: str
+    quantita: float
+
+
+class CaricoMultiploIn(BaseModel):
+    righe: list[CaricoRiga]
+
+
+class RisultatoCarico(BaseModel):
+    aggiornati: int
+    pezzi_totali: float
+    valore_carico: float
+    materiali: list[Materiale] = Field(default_factory=list)
+
+
+@router.post("/ricarico-prezzi", response_model=RisultatoRicarico)
+async def ricarico_prezzi(input: RicaricoIn):
+    """Applica un rincaro percentuale ai prezzi di una categoria (o di tutto).
+
+    Percentuale positiva = aumento, negativa = sconto. I nuovi prezzi sono
+    calcolati e salvati riga per riga, arrotondati a 2 decimali.
+    """
+    if input.percentuale == 0:
+        raise HTTPException(status_code=422, detail="Inserisci una percentuale diversa da zero")
+    if input.percentuale < -90 or input.percentuale > 500:
+        raise HTTPException(
+            status_code=422, detail="Percentuale fuori scala: ammessa tra -90% e +500%"
+        )
+    if input.categoria != "tutte" and input.categoria not in CATEGORIE:
+        raise HTTPException(status_code=422, detail="Categoria non valida")
+
+    query = {} if input.categoria == "tutte" else {"categoria": input.categoria}
+    docs = await db.materiali.find(query).sort("nome", 1).to_list(5000)
+    if not docs:
+        raise HTTPException(
+            status_code=404, detail="Nessun materiale trovato per questa categoria"
+        )
+
+    fattore = 1 + input.percentuale / 100
+    campi = (
+        ["prezzo_unitario"]
+        if input.applica_a == "vendita"
+        else ["prezzo_costo"]
+        if input.applica_a == "costo"
+        else ["prezzo_unitario", "prezzo_costo"]
+    )
+    aggiornati = 0
+    esempi: list[Materiale] = []
+    for doc in docs:
+        patch: dict[str, float] = {}
+        for campo in campi:
+            valore = float(doc.get(campo) or 0)
+            if valore <= 0:
+                continue
+            nuovo = valore * fattore
+            patch[campo] = round(nuovo, 2 if input.arrotonda else 4)
+        if not patch:
+            continue
+        await db.materiali.update_one({"id": doc["id"]}, {"$set": patch})
+        aggiornati += 1
+        if len(esempi) < 5:
+            esempi.append(Materiale(**{**doc, **patch}))
+
+    return RisultatoRicarico(
+        aggiornati=aggiornati,
+        categoria=input.categoria,
+        percentuale=input.percentuale,
+        applica_a=input.applica_a,
+        esempi=esempi,
+    )
+
+
+@router.post("/carico-multiplo", response_model=RisultatoCarico)
+async def carico_multiplo(input: CaricoMultiploIn):
+    """Carico di magazzino in blocco: segna cosa hai comprato dal fornitore."""
+    righe = [r for r in input.righe if r.quantita and r.quantita != 0]
+    if not righe:
+        raise HTTPException(status_code=422, detail="Inserisci almeno una quantità da caricare")
+
+    aggiornati = 0
+    pezzi = 0.0
+    valore = 0.0
+    materiali: list[Materiale] = []
+    for riga in righe:
+        quantita = round(riga.quantita, 2)
+        doc = await db.materiali.find_one_and_update(
+            {"id": riga.materiale_id},
+            {"$inc": {"quantita_disponibile": quantita}},
+            return_document=True,
+        )
+        if not doc:
+            continue
+        aggiornati += 1
+        pezzi += quantita
+        valore += quantita * float(doc.get("prezzo_costo") or 0)
+        if len(materiali) < 8:
+            materiali.append(Materiale(**doc))
+    if aggiornati == 0:
+        raise HTTPException(status_code=404, detail="Nessuno dei materiali indicati è stato trovato")
+
+    return RisultatoCarico(
+        aggiornati=aggiornati,
+        pezzi_totali=round(pezzi, 2),
+        valore_carico=round(valore, 2),
+        materiali=materiali,
+    )
 
 
 class RisultatoImport(BaseModel):

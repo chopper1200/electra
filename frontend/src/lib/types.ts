@@ -146,6 +146,7 @@ export interface Preventivo {
   scaduto: boolean;
   email_inviata_a: string;
   data_invio_email: string;
+  pdf_token: string;
   created_at: string;
 }
 

@@ -10,13 +10,16 @@ import {
   Plus,
   Search,
   Trash2,
+  TrendingUp,
   Upload,
 } from "lucide-react";
 import { apiDelete, apiGet } from "@/lib/api";
 import type { Materiale } from "@/lib/types";
 import { CATEGORIE, fmtEuro, fmtNum } from "@/lib/format";
+import CaricoRapidoModal from "@/components/CaricoRapidoModal";
 import ImportListinoModal from "@/components/ImportListinoModal";
 import MaterialModal from "@/components/MaterialModal";
+import RicaricoPrezziModal from "@/components/RicaricoPrezziModal";
 import StockModal from "@/components/StockModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +49,8 @@ export default function Materiali() {
   const [stockOpen, setStockOpen] = useState(false);
   const [stockTarget, setStockTarget] = useState<Materiale | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [ricaricoOpen, setRicaricoOpen] = useState(false);
+  const [caricoOpen, setCaricoOpen] = useState(false);
 
   const { data: materiali, isLoading, isError } = useQuery({
     queryKey: ["materiali"],
@@ -144,6 +149,22 @@ export default function Materiali() {
           <p className="text-sm text-slate-400">Catalogo e giacenze di magazzino</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            data-testid="btn-carico-rapido"
+            onClick={() => setCaricoOpen(true)}
+            className="min-h-11"
+          >
+            <PackagePlus size={16} /> Carico rapido
+          </Button>
+          <Button
+            variant="outline"
+            data-testid="btn-ricarico-prezzi"
+            onClick={() => setRicaricoOpen(true)}
+            className="min-h-11"
+          >
+            <TrendingUp size={16} /> Ricarico prezzi
+          </Button>
           <Button
             variant="outline"
             data-testid="btn-import-listino"
@@ -311,6 +332,8 @@ export default function Materiali() {
       <MaterialModal open={editOpen} onOpenChange={setEditOpen} materiale={editTarget} />
       <StockModal open={stockOpen} onOpenChange={setStockOpen} materiale={stockTarget} />
       <ImportListinoModal open={importOpen} onOpenChange={setImportOpen} />
+      <RicaricoPrezziModal open={ricaricoOpen} onOpenChange={setRicaricoOpen} />
+      <CaricoRapidoModal open={caricoOpen} onOpenChange={setCaricoOpen} />
     </div>
   );
 }

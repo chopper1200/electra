@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   CheckCircle2,
+  FileDown,
   Mail,
   Pencil,
   Printer,
@@ -151,13 +152,22 @@ export default function PreventivoDetail() {
                 <Wrench size={15} /> Converti in lavoro
               </Button>
             )}
+            <a
+              href={`/api/preventivi/${p.id}/pdf`}
+              target="_blank"
+              rel="noreferrer"
+              data-testid="btn-download-pdf"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <FileDown size={15} /> Scarica PDF
+            </a>
             <Button
               size="sm"
               variant="outline"
               data-testid="btn-print-quote"
               onClick={() => window.print()}
             >
-              <Printer size={15} /> Stampa / PDF
+              <Printer size={15} /> Stampa
             </Button>
           </>
         )}
