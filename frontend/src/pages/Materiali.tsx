@@ -10,10 +10,12 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { apiDelete, apiGet } from "@/lib/api";
 import type { Materiale } from "@/lib/types";
 import { CATEGORIE, fmtEuro, fmtNum } from "@/lib/format";
+import ImportListinoModal from "@/components/ImportListinoModal";
 import MaterialModal from "@/components/MaterialModal";
 import StockModal from "@/components/StockModal";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +45,7 @@ export default function Materiali() {
   const [editTarget, setEditTarget] = useState<Materiale | null>(null);
   const [stockOpen, setStockOpen] = useState(false);
   const [stockTarget, setStockTarget] = useState<Materiale | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: materiali, isLoading, isError } = useQuery({
     queryKey: ["materiali"],
@@ -140,16 +143,26 @@ export default function Materiali() {
           </h1>
           <p className="text-sm text-slate-400">Catalogo e giacenze di magazzino</p>
         </div>
-        <Button
-          data-testid="btn-create-material"
-          onClick={() => {
-            setEditTarget(null);
-            setEditOpen(true);
-          }}
-          className="min-h-11 bg-amber-500 text-black hover:bg-amber-600"
-        >
-          <Plus size={16} /> Nuovo materiale
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            data-testid="btn-import-listino"
+            onClick={() => setImportOpen(true)}
+            className="min-h-11"
+          >
+            <Upload size={16} /> Importa listino
+          </Button>
+          <Button
+            data-testid="btn-create-material"
+            onClick={() => {
+              setEditTarget(null);
+              setEditOpen(true);
+            }}
+            className="min-h-11 bg-amber-500 text-black hover:bg-amber-600"
+          >
+            <Plus size={16} /> Nuovo materiale
+          </Button>
+        </div>
       </div>
 
       {bassi.length > 0 && (
@@ -221,8 +234,20 @@ export default function Materiali() {
         <div className="rounded-2xl border border-dashed border-[#27364F] px-4 py-12 text-center" data-testid="materiali-empty">
           <Package size={28} className="mx-auto text-slate-500" />
           <p className="mt-3 text-sm text-slate-400">
-            Nessun materiale trovato. Modifica la ricerca o aggiungine uno nuovo.
+            {materiali?.length
+              ? "Nessun materiale trovato con questa ricerca."
+              : "Catalogo vuoto. Importa il listino del tuo fornitore o aggiungi il primo articolo a mano."}
           </p>
+          {!materiali?.length && (
+            <Button
+              variant="outline"
+              data-testid="empty-import-listino"
+              onClick={() => setImportOpen(true)}
+              className="mt-4"
+            >
+              <Upload size={15} /> Importa listino
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -285,6 +310,7 @@ export default function Materiali() {
 
       <MaterialModal open={editOpen} onOpenChange={setEditOpen} materiale={editTarget} />
       <StockModal open={stockOpen} onOpenChange={setStockOpen} materiale={stockTarget} />
+      <ImportListinoModal open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

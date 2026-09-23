@@ -1,12 +1,15 @@
 """Router /api/materiali — catalogo e magazzino."""
 
+import re
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from lib.db import db
+from lib.listino import leggi_tabella, modello_xlsx, righe_normalizzate
 
 router = APIRouter(prefix="/materiali", tags=["materiali"])
 
@@ -103,3 +106,102 @@ async def elimina_materiale(materiale_id: str):
     res = await db.materiali.delete_one({"id": materiale_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Materiale non trovato")
+
+
+class RisultatoImport(BaseModel):
+    creati: int
+    aggiornati: int
+    ignorati: int
+    totale_righe: int
+    colonne_riconosciute: dict[str, str] = Field(default_factory=dict)
+    avvisi: list[str] = Field(default_factory=list)
+    anteprima: list[Materiale] = Field(default_factory=list)
+
+
+ESTENSIONI_OK = (".xlsx", ".xlsm", ".csv")
+MAX_BYTES = 5 * 1024 * 1024
+
+
+@router.get("/import/modello")
+async def scarica_modello():
+    """Modello Excel con le intestazioni attese, da compilare e ricaricare."""
+    return Response(
+        content=modello_xlsx(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="modello-listino-voltcraft.xlsx"'},
+    )
+
+
+@router.post("/import", response_model=RisultatoImport)
+async def importa_listino(
+    file: UploadFile = File(...),
+    aggiorna_esistenti: bool = Query(True, description="Aggiorna gli articoli già in catalogo"),
+    azzera_giacenze: bool = Query(False, description="Ignora le giacenze del file e lascia 0"),
+):
+    """Popola il catalogo da un listino fornitore (Excel o CSV).
+
+    Gli articoli sono riconosciuti dal codice articolo, oppure dal nome se il
+    codice manca: così ricaricare un listino aggiornato non crea duplicati.
+    """
+    nome_file = file.filename or ""
+    if not nome_file.lower().endswith(ESTENSIONI_OK):
+        raise HTTPException(
+            status_code=400,
+            detail="Formato non supportato: carica un file .xlsx o .csv",
+        )
+    contenuto = await file.read()
+    if not contenuto:
+        raise HTTPException(status_code=400, detail="Il file è vuoto")
+    if len(contenuto) > MAX_BYTES:
+        raise HTTPException(status_code=400, detail="File troppo grande: massimo 5 MB")
+
+    try:
+        df = leggi_tabella(contenuto, nome_file)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Impossibile leggere il file: verifica che sia un Excel o CSV valido",
+        )
+
+    righe, avvisi, mappa = righe_normalizzate(df)
+    if not righe:
+        raise HTTPException(
+            status_code=422,
+            detail=avvisi[0] if avvisi else "Nessun articolo valido trovato nel file",
+        )
+
+    creati = aggiornati = ignorati = 0
+    anteprima: list[Materiale] = []
+    for riga in righe:
+        if azzera_giacenze:
+            riga["quantita_disponibile"] = 0.0
+        query = (
+            {"codice_art": riga["codice_art"]}
+            if riga["codice_art"]
+            else {"nome": {"$regex": f"^{re.escape(riga['nome'])}$", "$options": "i"}}
+        )
+        esistente = await db.materiali.find_one(query)
+        if esistente:
+            if not aggiorna_esistenti:
+                ignorati += 1
+                continue
+            await db.materiali.update_one({"id": esistente["id"]}, {"$set": riga})
+            aggiornati += 1
+            if len(anteprima) < 5:
+                anteprima.append(Materiale(**{**esistente, **riga}))
+        else:
+            materiale = Materiale(**riga)
+            await db.materiali.insert_one(materiale.model_dump())
+            creati += 1
+            if len(anteprima) < 5:
+                anteprima.append(materiale)
+
+    return RisultatoImport(
+        creati=creati,
+        aggiornati=aggiornati,
+        ignorati=ignorati,
+        totale_righe=len(righe),
+        colonne_riconosciute={campo: str(col) for campo, col in mappa.items()},
+        avvisi=avvisi,
+        anteprima=anteprima,
+    )
