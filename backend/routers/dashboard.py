@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from lib.dates import current_month_iso, today_iso
+from lib.dates import current_month_iso
 from lib.db import db
 from routers.lavori import Lavoro
 from routers.materiali import Materiale
@@ -64,8 +64,8 @@ async def statistiche():
     ore_mese = 0.0
     valore_ore_mese = 0.0
     per_lavoro: list[OrePerLavoro] = []
-    for l in lavori:
-        voci = [e for e in l.ore_lavorate if e.data.startswith(mese)]
+    for lavoro in lavori:
+        voci = [e for e in lavoro.ore_lavorate if e.data.startswith(mese)]
         if not voci:
             continue
         ore = round(sum(e.ore for e in voci), 2)
@@ -74,9 +74,9 @@ async def statistiche():
         valore_ore_mese += valore
         per_lavoro.append(
             OrePerLavoro(
-                lavoro_id=l.id,
-                titolo=l.titolo,
-                cliente_nome=l.cliente_nome,
+                lavoro_id=lavoro.id,
+                titolo=lavoro.titolo,
+                cliente_nome=lavoro.cliente_nome,
                 ore=ore,
                 valore=valore,
             )
@@ -84,22 +84,21 @@ async def statistiche():
     ore_mese = round(ore_mese, 2)
     valore_ore_mese = round(valore_ore_mese, 2)
 
-    oggi = today_iso()
     scaduti = sorted(
         (p for p in preventivi if p.scaduto),
         key=lambda p: p.data_scadenza,
     )
 
     return DashboardStats(
-        lavori_da_iniziare=sum(1 for l in lavori if l.stato == "da_iniziare"),
-        lavori_in_corso=sum(1 for l in lavori if l.stato == "in_corso"),
-        lavori_completati=sum(1 for l in lavori if l.stato == "completato"),
+        lavori_da_iniziare=sum(1 for x in lavori if x.stato == "da_iniziare"),
+        lavori_in_corso=sum(1 for x in lavori if x.stato == "in_corso"),
+        lavori_completati=sum(1 for x in lavori if x.stato == "completato"),
         preventivi_in_attesa=sum(1 for p in preventivi if p.stato == "inviato"),
         valore_preventivi_attesa=round(
             sum(p.totale_preventivo for p in preventivi if p.stato == "inviato"), 2
         ),
         fatturato_completato=round(
-            sum(l.prezzo_pattuito for l in lavori if l.stato == "completato"), 2
+            sum(x.prezzo_pattuito for x in lavori if x.stato == "completato"), 2
         ),
         valore_magazzino=round(
             sum(m.quantita_disponibile * m.prezzo_costo for m in materiali), 2
@@ -111,7 +110,7 @@ async def statistiche():
         tariffa_media_mese=round(valore_ore_mese / ore_mese, 2) if ore_mese else 0.0,
         ore_mese_per_lavoro=sorted(per_lavoro, key=lambda x: x.ore, reverse=True),
         materiali_sotto_scorta=sotto_scorta,
-        ultimi_lavori=sorted(lavori, key=lambda l: l.created_at, reverse=True)[:5],
+        ultimi_lavori=sorted(lavori, key=lambda x: x.created_at, reverse=True)[:5],
         preventivi_recenti=sorted(preventivi, key=lambda p: p.created_at, reverse=True)[:5],
         preventivi_scaduti=scaduti,
     )

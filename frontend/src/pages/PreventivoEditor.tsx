@@ -20,7 +20,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+// Chiave stabile per riga: gli indici array come key perdono lo stato del form
+// quando si rimuove o riordina una riga.
+let rowSeq = 0;
+const rowKey = () => `r${++rowSeq}`;
+
 interface MatRow {
+  key: string;
   materiale_id: string;
   nome: string;
   unita: string;
@@ -29,6 +35,7 @@ interface MatRow {
 }
 
 interface ManRow {
+  key: string;
   descrizione: string;
   ore: string;
   tariffa_oraria: string;
@@ -65,7 +72,9 @@ const emptyForm = (): FormState => ({
   data_emissione: new Date().toISOString().slice(0, 10),
   validita_giorni: "30",
   matRows: [],
-  manRows: [{ descrizione: "", ore: "", tariffa_oraria: "35", lavoro_id: "", ore_entry_id: "" }],
+  manRows: [
+    { key: rowKey(), descrizione: "", ore: "", tariffa_oraria: "35", lavoro_id: "", ore_entry_id: "" },
+  ],
   sconto: "",
   aliquota: "22",
   note_condizioni: NOTE_DEFAULT,
@@ -109,6 +118,7 @@ export default function PreventivoEditor() {
       data_emissione: quote.data_emissione,
       validita_giorni: String(quote.validita_giorni),
       matRows: quote.voci_materiali.map((v) => ({
+        key: rowKey(),
         materiale_id: v.materiale_id,
         nome: v.nome,
         unita: v.unita,
@@ -116,6 +126,7 @@ export default function PreventivoEditor() {
         quantita: String(v.quantita),
       })),
       manRows: quote.voci_manodopera.map((v) => ({
+        key: rowKey(),
         descrizione: v.descrizione,
         ore: String(v.ore),
         tariffa_oraria: String(v.tariffa_oraria),
@@ -172,7 +183,10 @@ export default function PreventivoEditor() {
   const addMat = () =>
     setForm((f) => ({
       ...f,
-      matRows: [...f.matRows, { materiale_id: "", nome: "", unita: "pz", prezzo_unitario: "", quantita: "" }],
+      matRows: [
+        ...f.matRows,
+        { key: rowKey(), materiale_id: "", nome: "", unita: "pz", prezzo_unitario: "", quantita: "" },
+      ],
     }));
 
   const removeMat = (idx: number) =>
@@ -189,7 +203,7 @@ export default function PreventivoEditor() {
       ...f,
       manRows: [
         ...f.manRows,
-        { descrizione: "", ore: "", tariffa_oraria: "35", lavoro_id: "", ore_entry_id: "" },
+        { key: rowKey(), descrizione: "", ore: "", tariffa_oraria: "35", lavoro_id: "", ore_entry_id: "" },
       ],
     }));
 
@@ -210,6 +224,7 @@ export default function PreventivoEditor() {
       return;
     }
     const nuoveRighe: ManRow[] = voci.map((e) => ({
+      key: rowKey(),
       descrizione: `${e.descrizione || "Manodopera"}${e.data ? ` — ${fmtDate(e.data)}` : ""}`,
       ore: String(e.ore),
       tariffa_oraria: String(e.tariffa_oraria),
@@ -232,6 +247,7 @@ export default function PreventivoEditor() {
       return;
     }
     const nuove: MatRow[] = voci.map((i) => ({
+      key: rowKey(),
       materiale_id: i.materiale_id,
       nome: i.nome,
       unita: i.unita,
@@ -448,7 +464,7 @@ export default function PreventivoEditor() {
                 )}
                 {form.matRows.map((r, i) => (
                   <div
-                    key={i}
+                    key={r.key}
                     data-testid={`quote-material-row-${i}`}
                     className="grid grid-cols-12 items-end gap-2 rounded-lg border border-[#1E293B] bg-[#162032] p-3"
                   >
@@ -575,7 +591,7 @@ export default function PreventivoEditor() {
               <div className="mt-4 space-y-3">
                 {form.manRows.map((r, i) => (
                   <div
-                    key={i}
+                    key={r.key}
                     data-testid={`quote-labor-row-${i}`}
                     className="grid grid-cols-12 items-end gap-2 rounded-lg border border-[#1E293B] bg-[#162032] p-3"
                   >
