@@ -19,7 +19,7 @@ const ITEMS = [
 
 export default function MobileNav() {
   return (
-    <nav
+    <nav aria-label="Navigazione mobile"
       data-testid="mobile-bottom-nav"
       className="no-print fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-[#1E293B] bg-[#080C14]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
     >

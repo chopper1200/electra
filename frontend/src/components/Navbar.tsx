@@ -43,7 +43,7 @@ export default function Navbar() {
           </span>
         </NavLink>
 
-        <nav className="hidden items-center gap-0.5 md:flex">
+        <nav aria-label="Navigazione principale" className="hidden items-center gap-0.5 md:flex">
           {LINKS.map(({ to, label, icon: Icon, testId, end }) => (
             <NavLink
               key={to}
