@@ -72,10 +72,10 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-500/80">
-            Centro di controllo
+            Il tuo spazio di lavoro
           </p>
           <h1 className="mt-1 font-heading text-[32px] font-bold leading-none tracking-tight text-slate-50 sm:text-4xl">
-            Dashboard
+            Tutto sotto controllo
           </h1>
           <p className="mt-2 text-sm capitalize text-slate-400">{oggi}</p>
         </div>
