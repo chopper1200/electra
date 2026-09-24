@@ -34,9 +34,14 @@ if (!hotReloadDisabled) {
 }
 
 // https://vite.dev/config/
+// Build statica per GitHub Pages (yarn build:static): asset con percorsi relativi,
+// così l'app funziona anche servita da /<repo>/ su github.io.
+const staticBuild = process.env.VITE_STATIC === "1";
+
 export default defineConfig(async () => {
   const emergentOverlay = await loadEmergentOverlay();
   return {
+    base: staticBuild ? "./" : "/",
     plugins: [
       react(),
       tailwindcss(),

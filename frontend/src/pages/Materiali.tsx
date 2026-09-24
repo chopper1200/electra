@@ -13,7 +13,7 @@ import {
   TrendingUp,
   Upload,
 } from "lucide-react";
-import { apiDelete, apiGet } from "@/lib/api";
+import { apiDelete, apiGet, STATIC_MODE } from "@/lib/api";
 import type { Materiale } from "@/lib/types";
 import { CATEGORIE, fmtEuro, fmtNum } from "@/lib/format";
 import CaricoRapidoModal from "@/components/CaricoRapidoModal";
@@ -165,6 +165,7 @@ export default function Materiali() {
           >
             <TrendingUp size={16} /> Ricarico prezzi
           </Button>
+          {!STATIC_MODE && (
           <Button
             variant="outline"
             data-testid="btn-import-listino"
@@ -173,6 +174,7 @@ export default function Materiali() {
           >
             <Upload size={16} /> Importa listino
           </Button>
+          )}
           <Button
             data-testid="btn-create-material"
             onClick={() => {
@@ -259,7 +261,7 @@ export default function Materiali() {
               ? "Nessun materiale trovato con questa ricerca."
               : "Catalogo vuoto. Importa il listino del tuo fornitore o aggiungi il primo articolo a mano."}
           </p>
-          {!materiali?.length && (
+          {!materiali?.length && !STATIC_MODE && (
             <Button
               variant="outline"
               data-testid="empty-import-listino"

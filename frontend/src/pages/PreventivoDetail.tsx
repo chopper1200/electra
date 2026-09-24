@@ -13,7 +13,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { ApiError, apiGet, apiPatch, apiPost } from "@/lib/api";
+import { ApiError, apiGet, apiPatch, apiPost, STATIC_MODE } from "@/lib/api";
 import type { Lavoro, Preventivo } from "@/lib/types";
 import { fmtDate, fmtEuro, fmtNum } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
@@ -87,6 +87,7 @@ export default function PreventivoDetail() {
         <div className="flex-1" />
         {p && (
           <>
+            {!STATIC_MODE && (
             <Button
               size="sm"
               data-testid="btn-email-quote"
@@ -102,6 +103,7 @@ export default function PreventivoDetail() {
               <Mail size={15} />
               {invia.isPending ? "Invio…" : "Invia per email"}
             </Button>
+            )}
             {p.stato === "bozza" && (
               <>
                 <Link
@@ -152,6 +154,7 @@ export default function PreventivoDetail() {
                 <Wrench size={15} /> Converti in lavoro
               </Button>
             )}
+            {!STATIC_MODE && (
             <a
               href={`/api/preventivi/${p.id}/pdf`}
               target="_blank"
@@ -161,6 +164,7 @@ export default function PreventivoDetail() {
             >
               <FileDown size={15} /> Scarica PDF
             </a>
+            )}
             <Button
               size="sm"
               variant="outline"

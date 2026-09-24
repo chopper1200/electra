@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:static": "tsc -b && VITE_STATIC=1 vite build --outDir ../docs --emptyOutDir && touch ../docs/.nojekyll && cp ../docs/index.html ../docs/404.html",
     "lint": "oxlint",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit"

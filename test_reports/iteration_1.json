@@ -1,0 +1,76 @@
+{
+  "iteration": 1,
+  "summary": "9 browser checks + 4 backend test files (9 pytest cases) covering all 8 acceptance criteria. All passed after fixing missing PIN-unlock handling in 5 pre-existing checks (fresh browser contexts hit the pin-lock-screen every time).",
+  "passed": 9,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "Gate PIN: l'app non è utilizzabile senza PIN",
+      "name": "pin-lock-gate",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "pin-lock-screen visible cold; wrong PIN 0000 -> pin-lock-error shown, screen stays locked; PIN 1987 -> pin-lock-screen disappears, nav-spesa-link visible (dashboard+navbar reachable)."
+    },
+    {
+      "criterion": "Lista materiali da comprare per lavoro",
+      "name": "lavoro-lista-spesa-add-items",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Added catalog item via lista-select-material + lista-input-quantita and free item via lista-modo-libero/lista-input-nome; both appear in lista-items; lista-totale shows 'Spesa stimata'."
+    },
+    {
+      "criterion": "Voci lista modificabili ed eliminabili",
+      "name": "lavoro-lista-edit-delete-persist",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Edited lista-qty-<id> to 7 and lista-price-<id> to 9.5, closed and reopened lista-modal: values persisted (toHaveValue 7 / 9.5). lista-delete-<id> on a free-text item removed its row."
+    },
+    {
+      "criterion": "Confronto con la giacenza di magazzino",
+      "name": "lavoro-lista-confronto-giacenza",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Item qty 8 vs giacenza 5 -> row shows 'mancano 3'; after editing qty to 4 -> row shows 'già in magazzino'."
+    },
+    {
+      "criterion": "Carico da lista: spuntare comprato carica la giacenza",
+      "name": "lavoro-lista-carico-checkbox",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "GET /api/materiali before/after lista-toggle-<id> click: quantita_disponibile 5->9 on check (qty 4), back to 5 on uncheck; no double counting."
+    },
+    {
+      "criterion": "Lista della spesa unica su /spesa",
+      "name": "spesa-page-aggregates",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Two jobs (A qty4, B qty6) against materiale with giacenza 2: /spesa spesa-row-<materialeId> shows spesa-mancante-<id> '8' (=10-2) and spesa-cantieri-<id> lists both job titles."
+    },
+    {
+      "criterion": "Import della lista nel preventivo",
+      "name": "preventivo-import-lista",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "In /preventivi/nuovo, quote-import-lista-select + btn-import-lista imported both the catalog item and the free-text item as editable material rows; saved quote (GET /api/preventivi/<id>) contains both nomi in voci_materiali and totale_preventivo > 0."
+    },
+    {
+      "criterion": "Funzioni server-only restano attive nell'app completa",
+      "name": "server-only-features-present",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/materiali shows btn-import-listino; preventivo detail page shows btn-email-quote and btn-download-pdf, all visible in the full (non-static) build."
+    },
+    {
+      "criterion": "Backend API coverage: lista-spesa add/validate/carico/unica (supports criteria 2,4,5,6)",
+      "name": "test_tscheck_lista_spesa_carico.py / test_tscheck_lista_spesa_unica.py / test_tscheck_lista_spesa_validazioni.py / test_tscheck_dashboard.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "pytest -q: 9 passed in 1.31s (all 4 test files, no failures, no test_error)."
+    }
+  ],
+  "bugs": [],
+  "action_items": [
+    "Pre-existing browser checks (dashboard-shows-kpis, lavoro-lista-spesa-add-items, lavoro-lista-confronto-giacenza, lavoro-lista-carico-checkbox, spesa-page-aggregates) lacked PIN-unlock handling and failed on a fresh browser context; updated all 5 to unlock with PIN 1987 before proceeding. No app code was touched."
+  ],
+  "retest_needed": false
+}

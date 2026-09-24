@@ -64,8 +64,19 @@ Dark obsidian/navy: pagina `#0B0F17`, pannelli `#111827`, superfici elevate `#16
 
 **Email (Resend gestito da Emergent)** — `backend/lib/email.py`: `send_email()` POSTa su `https://integrations.emergentagent.com/api/v1/email/send` con header `X-Email-Key`. Env in backend/.env: `EMERGENT_EMAIL_KEY` e `EMAIL_FROM_NAME=VoltCraft Elettrica` (nome mittente visibile; l'indirizzo From è gestito dalla piattaforma). `_assert_safe_email()` è un gate obbligatorio chiamato su ogni invio (blocca form/input, link non-https, richieste di credenziali) — non va indebolito né avvolto in try/except. Nessuna chiave dell'utente richiesta. Opzionale: `EMAIL_REPLY_TO` per far arrivare le risposte a una casella dell'elettricista (non ancora impostata).
 
+## Accesso con PIN
+`frontend/src/components/PinLock.tsx` avvolge l'app in `main.tsx` (fuori dal Router): schermata di blocco all'apertura, **PIN 1987**, nel codice solo l'hash SHA-256 (`VITE_PIN_HASH` per sovrascriverlo a build time), sblocco salvato in `sessionStorage["voltcraft.unlocked"]` (vale fino alla chiusura del browser). Single-user, nessun account.
+
+## Modalità statica per GitHub Pages
+`yarn build:static` (in frontend/) → `VITE_STATIC=1 vite build --outDir ../docs`, base `./`, `.nojekyll` + `404.html`; GitHub Pages va configurato su branch `main`, cartella `/docs`. Guida utente completa in `/app/GITHUB.md`.
+- `frontend/src/lib/api.ts` esporta `STATIC_MODE` (`import.meta.env.VITE_STATIC === "1"`): quando è attivo, `request()` instrada su `frontend/src/lib/staticStore.ts` invece di `fetch("/api…")`. Nessuna pagina o componente è stato duplicato: **unico codebase**.
+- `staticStore.ts` = backend locale in TS su `localStorage` (chiave `voltcraft.db.v1`): replica lavori/materiali/preventivi/clienti/dashboard/lista-spesa unica, numerazione preventivi, totali IVA/sconto, `con_scadenza`, upsert cliente, sync ore, carico da lista. Errori con `StaticApiError` → convertiti in `ApiError` con gli stessi status (404/422/400/409).
+- Non disponibili in statico (501 con messaggio in italiano) e **nascosti nella UI** via `STATIC_MODE`: invio email preventivo, PDF reportlab (`btn-download-pdf`), import listino Excel. Resta «Stampa» del browser.
+- `main.tsx` monta **HashRouter** in modalità statica (GitHub Pages non riscrive le rotte) e BrowserRouter altrimenti — sempre un solo Router.
+- Tipi env in `frontend/src/vite-env.d.ts`.
+
 ## Note
-- Credenziali: nessuna — l'app è senza login (vedi memory/test_credentials.md).
+- Credenziali: PIN 1987 (vedi memory/test_credentials.md).
 - Date formattate it-IT (DD/MM/YYYY), EUR it-IT; "oggi" ancorato lato server con `lib/dates.today_iso()`.
 - Le date input dell'editor usano default client-side solo come display; il server ri-ancora se vuote.
 - Print: `@media print` in index.css nasconde `.no-print` (nav, toolbar) e resetta lo sfondo.
